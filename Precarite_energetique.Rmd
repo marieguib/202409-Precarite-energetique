@@ -1,0 +1,461 @@
+---
+title: "Quelles seront les sollicitations de subventions pour le fonds verts des communes en Bretagne ? Et pourquoi ?"
+author: "Marie Guibert"
+date: "2024-03-05"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+# Environnement de travail
+
+
+```{r message = FALSE}
+library(aws.s3)
+library(dplyr)
+library(stringr)
+```
+
+# I. Importations et traitements des données
+
+Tout d'abord, nous allons nous focaliser sur la région Bretagne dans un premier temps lors de cette étude. 
+
+## I.1. Variable à expliquer
+
+On importe d'abord les données CHORUS concernant le programme 380 (fonds vert) pour récupérer les informations nécessaires à notre étude. 
+
+```{r message = FALSE}
+BUCKET <- "marieguibert2"
+FILE_KEY_S3 <- "Sujet_master/Data/Y/prog380.csv"
+
+ae_fonds_vert <- 
+  aws.s3::s3read_using(
+    FUN = readr::read_csv, 
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(ae_fonds_vert)
+```
+
+Ce tableau nous montre que le programme du fonds vert ne contient des données seulement pour l'année 2023. Nous allons nous intéresser au code INSEE de la commune et le montant du financement. 
+
+```{r}
+ae_fonds_vert <- ae_fonds_vert %>% 
+  select(beneficiaire_commune_code, montant_ae)
+
+head(ae_fonds_vert)
+```
+
+```{r}
+nrow(ae_fonds_vert)
+```
+
+On regarde combien de communes sont concernées par la demande de financement pour le programme du fonds vert. 
+
+```{r}
+length(unique(ae_fonds_vert$beneficiaire_commune_code))
+```
+
+On a donc 259 communes pour l'année 2023 alors que la longueur de notre dataframe est de 461 lignes. Nous allons donc regrouper les données par code commune et sommer les valeurs associées
+--> QUESTION : somme ou nombre de projet ? 
+--> Capacité à répondre : nombre de projets
+--> Adéquation aux enjeux communaux : montant
+
+```{r}
+ae_fonds_vert_groupe <- ae_fonds_vert %>%
+  group_by(beneficiaire_commune_code) %>%
+  summarize(total_montant_ae = sum(montant_ae))
+
+head(ae_fonds_vert_groupe)
+```
+
+```{r}
+dim(ae_fonds_vert_groupe)
+```
+
+Notre tableau final contient bien le code de la commune et le montant associé aux financements concernant le fonds vert. 
+
+## I.2. Variables explicatives
+
+Nous allons à présent passer à l'importation des différentes variables explicatives. 
+
+
+### I.2.A. Dépenses énergétiques
+
+
+
+
+
+### I.2.B. Logement
+
+Nous allons importer des données concernant la thématique du logement
+
+Tout d'abord, nous allons nous focaliser sur le DPE des logements. Le Diagnostic de Performance Energétique (DPE) renseigne sur la performance énergétique et environnementale d’un logement ou d’un bâtiment, en évaluant sa consommation d’énergie et son impact en matière d’émissions de gaz à effet de serre.
+
+
+```{r}
+library(httr)
+library(jsonlite)
+
+# URL API
+url_logements_existants <- "https://data.ademe.fr/data-fair/api/v1/datasets/dpe-v2-logements-existants/lines"
+limite <- 10000
+all_data <- tibble()
+offset <- 0
+
+
+```
+
+Nous allons exporter ce fichier csv car il est très lourd, nous n'aurons pas à refaire la manipulation plusieurs fois.
+
+
+Nous allons maintenant nous intéresser à la base de données "cartofriches". Elle permet de référencer des sites potentiellement en friche. Le terme de « friches » est pris ici dans le sens d’espaces artificialisés et inoccupés.
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Logement/friches-standard.csv"
+
+fichier_friches <- 
+  aws.s3::s3read_using(
+    FUN = readr::read_delim,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+friches <- fichier_friches %>% 
+  select(comm_insee) %>% 
+  mutate(friche = 1)
+  
+head(friches)
+```
+
+
+
+La démarche ÉcoQuartier, portée par le Ministère de la Transition écologique et de la Cohésion des Territoires, favorise de nouvelles façons de concevoir, construire et gérer la ville durablement. 
+Cette variable m'a donc paru importante à inclure dans le programme du fonds vert. 
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Logement/EcoQuartiers_jan2016.csv"
+
+eco_quartiers <- 
+  aws.s3::s3read_using(
+    FUN = readr::read_delim,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(eco_quartiers)  
+```
+
+On conserve seulement la colonnes qui nous intéresse pour notre étude : le code INSEE. On considère que si la commune apparaît, alors elle porte / fait partie d'un projet d'écoquartiers. 
+--> Je ne suis pas rentrée dans les détails car la base de données est très détaillée. 
+
+```{r}
+eco_quartiers <- eco_quartiers %>% 
+  select(`Code INSEE`) %>% 
+  mutate(ecoquartiers= 1)
+
+head(eco_quartiers)
+```
+
+Pour avoir une idée des communes favorisant le plus les écoquartiers, nous allons sommer pour obtenir le nombre d'écoquartiers labellisés dans les communes. 
+
+```{r}
+eco_quartiers_nb <- eco_quartiers %>% 
+  group_by(`Code INSEE`) %>% 
+  summarize(nb_ecoquartiers = sum(ecoquartiers))
+
+head(eco_quartiers_nb)
+```
+
+
+### I.2.C. Urbanisme
+
+Nous allons importer le fichier qui recense les villages d'avenir (communes qui sont bénéficiaires d'un programme : PVD, ACV, ...)
+
+```{r message = FALSE}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Urbanisme/zonages.xlsx"
+
+zonages_prog <- 
+  aws.s3::s3read_using(
+    FUN = readxl::read_excel,
+    skip = 4, 
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(zonages_prog)
+```
+
+On conserve les colonnes avec le code de la commune et si elle est bénéficiaire ou non d'un programme (ACV / PVD / ...)
+
+```{r}
+zonages_prog <- zonages_prog %>% 
+  select(1,3) %>% 
+  rename("beneficiaire_prog" = va_zpp) %>% 
+  mutate(beneficiaire_prog = gsub("out", "0", beneficiaire_prog)) %>%
+  mutate(beneficiaire_prog = gsub("in", "1", beneficiaire_prog))
+
+head(zonages_prog)
+```
+
+On note que les données sont légèrement déséquilibrées (faire attention pour la suite)
+
+```{r}
+table(zonages_prog$beneficiaire_prog)
+```
+
+On importe ensuite les données concernant les communes couvertes par les CRTE 
+
+```{r message = FALSE}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Urbanisme/liste-crte-com2023-20230823.csv"
+
+liste_crte <- 
+  aws.s3::s3read_using(
+    FUN = readr::read_delim,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(liste_crte)
+```
+
+On ne conserve seulement que la colonne avec le code commune et on ajoute une colonne avec la valeur 1 pour signifier qu'elles sont couvertes par les CRTE (variable binaire)
+
+```{r}
+liste_crte <- liste_crte %>% 
+  select(1) %>% 
+  mutate("couverte_crte" = 1)
+
+head(liste_crte)
+  
+```
+
+Nous allons à présent importer les données pour savoir si la commune est concernée par la loi littoral (COG de 2022)
+
+```{r message = FALSE}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Urbanisme/loi_littoral-1996-COG2022.xlsx"
+
+loi_littoral <- 
+  aws.s3::s3read_using(
+    FUN = readxl::read_excel,
+    sheet = "Perimetre",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(loi_littoral)
+```
+
+On conserve le code insee de la commune et le classement. On va ensuite convertir la variable classement en une variable à plusieurs modalités
+
+```{r}
+loi_littoral <- loi_littoral %>% 
+  select(INSEE_COM, CLASSEMENT)
+
+head(loi_littoral)
+```
+
+On transforme ensuite la variable CLASSEMENT en une variable à 3 modalités
+
+```{r}
+table(loi_littoral$CLASSEMENT)
+```
+
+```{r}
+loi_littoral <- loi_littoral %>% 
+  mutate(CLASSEMENT = gsub("Estuaire", "0", CLASSEMENT)) %>%
+  mutate(CLASSEMENT = gsub("Lac", "1", CLASSEMENT)) %>% 
+  mutate(CLASSEMENT = gsub("Mer", "2", CLASSEMENT))
+
+table(loi_littoral$CLASSEMENT)
+```
+
+```{r}
+head(loi_littoral)
+```
+
+
+Nous allons ensuite importer les données qui décrivent la grille communale de densité en 7 niveaux : 
+- niveau 1 : Grands centres urbains
+- niveau 2 : Centres urbains intermédiaires
+- niveau 3 : Petites villes
+- niveau 4 : Ceintures urbaines
+- niveau 5 : Bourgs ruraux
+- niveau 6 : Rural à habitat dispersé
+- niveau 7 : Rural à habitat très dispersé
+
+```{r message = FALSE}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Urbanisme/densite_7niveaux.xlsx"
+
+densite7 <- 
+  aws.s3::s3read_using(
+    FUN = readxl::read_excel,
+    skip = 4, 
+    sheet = 'Data',
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(densite7)
+```
+
+On conserve le code et la grille de niveaux
+
+```{r}
+densite7 <- densite7 %>% 
+  select(1,3)
+
+head(densite7)
+```
+
+
+
+Nous allons ensuite importer les données concernant la superficie de chaque commune
+
+```{r message = FALSE}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Urbanisme/superficie.xlsx"
+
+superficie <- 
+  aws.s3::s3read_using(
+    FUN = readxl::read_excel,
+    skip = 4, 
+    sheet = 'Data',
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(superficie)
+```
+
+
+Nous allons conserver les superficies les plus actualisées (pour l'année 2020) et sélectionner les colonnes qui nous intéressent
+
+```{r}
+superficie <- superficie %>% 
+  filter(an == 2020) %>% 
+  select(codgeo, superf_choro)
+
+head(superficie)
+```
+
+
+
+### I.2.D. Transport
+
+Nous allons maintenant importer des données concernant la thématique du transport.
+
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Transport/arret_ferroviaire.csv"
+
+gares <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(gares)
+```
+
+On conserve les colonnes qui peuvent nous être utiles par la suite
+
+```{r}
+gares <- gares %>% 
+  select(code_uic,code_insee, tgv)
+head(gares)
+```
+
+On modifie la variable pour avoir une variable binaire
+
+```{r}
+gares <- gares %>%  
+  mutate(tgv = gsub("O", "1", tgv)) %>%
+  mutate(tgv = gsub("N", "0", tgv)) 
+```
+
+Il faut supprimer les doublons => garder O si O et N sinon 0
+
+```{r}
+length(unique(resultat$code_insee))
+```
+
+
+### I.2.E. Population / Economie / Emploi
+
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/mediane_revenu_dispo.xlsx"
+
+revenu_dispo <- 
+  aws.s3::s3read_using(
+    FUN = readxl::read_excel,
+    skip = 4,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(revenu_dispo)
+```
+
+On sélectionne les variables qui nous intéresse pour la suite
+
+```{r}
+revenu_dispo <- revenu_dispo %>% 
+  select(codgeo, med_disp)
+```
+
+Nous allons maintenant importer les données de population
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/population.xlsx"
+
+pop <- 
+  aws.s3::s3read_using(
+    FUN = readxl::read_excel,
+    skip = 4,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(pop)
+```
+
+
+```{r}
+pop <- pop %>% 
+  filter(an == 2020) %>% 
+  select(codgeo, p_pop)
+
+head(pop)
+```
+
+
+
+
+# II. Visualisation des données
+
+
+# III. Modélisation statistique
+
+
+## Apprentissage supervisé
+
+## Apprentissage non-supervisé
+
+
+# IV. Résultats
