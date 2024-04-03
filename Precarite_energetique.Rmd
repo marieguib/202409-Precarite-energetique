@@ -142,12 +142,25 @@ beneficiaires_fonds_vert <- left_join(ae_fonds_vert_binaire, communes,
 Nous allons à présent passer à l'importation des différentes variables explicatives. 
 
 
-### I.2.A. Dépenses énergétiques
+### I.2.A. Energie
 
 Nous allons importer les données de consommation annuelle d'électricité et de gaz
 
 ```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/..............."
+
 conso_elec_gaz <- 
+  aws.s3::s3read_using(
+    FUN = read.csv, 
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+ 
+```
+
+```{r}
+
 ```
 
 
@@ -508,6 +521,21 @@ pop <- pop %>%
 head(pop)
 ```
 
+Nous allons maintenant importer des données un peu plus sensibles : les maires en 2023
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/elus-municipaux-cm.csv"
+
+elus <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(elus)
+```
 
 
 
