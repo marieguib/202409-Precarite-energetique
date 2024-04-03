@@ -78,6 +78,65 @@ dim(ae_fonds_vert_groupe)
 
 Notre tableau final contient bien le code de la commune et le montant associé aux financements concernant le fonds vert. 
 
+```{r}
+ae_fonds_vert_binaire <- ae_fonds_vert %>%
+  select(beneficiaire_commune_code) %>% 
+  group_by(beneficiaire_commune_code) %>%
+  summarize(beneficiaire = 1)
+
+# Conversion pour avoir les mêmes types que dans le fichier communes
+ae_fonds_vert_binaire$beneficiaire_commune_code <- as.character(ae_fonds_vert_binaire$beneficiaire_commune_code)
+```
+
+
+Pour pouvoir constituer notre variable à expliquer, il nous faut le reste des communes de Bretagne 
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/Y/commune2021.csv"
+
+communes <- 
+  aws.s3::s3read_using(
+    FUN = read.csv, 
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(communes)
+```
+
+On ne conserve que les lignes et colonnes qui nous intéressent 
+
+# VOIR SI C'EST A CONSERVER
+--> les siret ne sont pas tous basés en Bretagne donc que faire ? un modèle pour la France entière ? je ne dois conserver que les lignes pour les siret en bretagne ? je ne sais pas trop ???
+
+On filtre d'abord sur la Bretagne
+
+```{r}
+communes <- communes %>% 
+  select(COM, REG) %>% 
+  filter(REG == 53) %>% 
+  select(COM)
+```
+
+On ajoute une colonne avec la valeur 0
+
+```{r}
+communes <- communes %>% 
+  mutate(beneficiaire = 0) %>% 
+  rename(beneficiaire_commune_code = COM)
+```
+
+Nous allons maintenant assembler les deux fichiers pour avoir notre variable à expliquer complète
+
+```{r}
+beneficiaires_fonds_vert <- left_join(ae_fonds_vert_binaire, communes,
+                                      by = "beneficiaire_commune_code",
+                                      suffix = c("_ae","_com"))
+```
+
+
+
 ## I.2. Variables explicatives
 
 Nous allons à présent passer à l'importation des différentes variables explicatives. 
@@ -85,6 +144,11 @@ Nous allons à présent passer à l'importation des différentes variables expli
 
 ### I.2.A. Dépenses énergétiques
 
+Nous allons importer les données de consommation annuelle d'électricité et de gaz
+
+```{r}
+conso_elec_gaz <- 
+```
 
 
 
