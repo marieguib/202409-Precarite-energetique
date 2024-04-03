@@ -466,7 +466,7 @@ gares <- gares %>%
 Il faut supprimer les doublons => garder O si O et N sinon 0
 
 ```{r}
-length(unique(resultat$code_insee))
+length(unique(gares$code_insee))
 ```
 
 
@@ -540,6 +540,15 @@ head(elus)
 
 
 # II. Visualisation des données
+
+
+```{r}
+library(ggplot2)
+ggplot(superficie)+
+  aes(x = 1:34945, y = superf_choro)+
+  geom_point()
+```
+
 
 
 # III. Modélisation statistique
