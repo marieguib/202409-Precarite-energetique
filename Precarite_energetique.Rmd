@@ -27,7 +27,7 @@ On importe d'abord les données CHORUS concernant le programme 380 (fonds vert) 
 
 ```{r message = FALSE}
 BUCKET <- "marieguibert2"
-FILE_KEY_S3 <- "Sujet_master/Data/Y/prog380.csv"
+FILE_KEY_S3 <- "Sujet_master/Data/Y/sqllab_untitled_query_1_20240405T134355.csv"
 
 ae_fonds_vert <- 
   aws.s3::s3read_using(
@@ -37,59 +37,78 @@ ae_fonds_vert <-
     opts = list("region" = "")
   )
 
-head(ae_fonds_vert)
-```
-
-Ce tableau nous montre que le programme du fonds vert ne contient des données seulement pour l'année 2023. Nous allons nous intéresser au code INSEE de la commune et le montant du financement. 
-
-```{r}
-ae_fonds_vert <- ae_fonds_vert %>% 
-  select(beneficiaire_commune_code, montant_ae)
+ae_fonds_vert$beneficiaire_code <- as.character(ae_fonds_vert$beneficiaire_code)
 
 head(ae_fonds_vert)
 ```
 
 ```{r}
-nrow(ae_fonds_vert)
+dim(ae_fonds_vert)
 ```
 
-On regarde combien de communes sont concernées par la demande de financement pour le programme du fonds vert. 
+Nous avons 232 bénéficiaires et 68 colonnes. Pour continuer notre analyse nous allons sélectionner les données au niveau communal 
+
 
 ```{r}
-length(unique(ae_fonds_vert$beneficiaire_commune_code))
-```
-
-On a donc 259 communes pour l'année 2023 alors que la longueur de notre dataframe est de 461 lignes. Nous allons donc regrouper les données par code commune et sommer les valeurs associées
---> QUESTION : somme ou nombre de projet ? 
---> Capacité à répondre : nombre de projets
---> Adéquation aux enjeux communaux : montant
-
-```{r}
-ae_fonds_vert_groupe <- ae_fonds_vert %>%
-  group_by(beneficiaire_commune_code) %>%
-  summarize(total_montant_ae = sum(montant_ae))
-
-head(ae_fonds_vert_groupe)
+# Vérification que tous les SIRET fassent bien 14 caractères
+table(str_length(ae_fonds_vert$beneficiaire_code))
 ```
 
 ```{r}
-dim(ae_fonds_vert_groupe)
+# Vérification qu'on ait que des communes
+table(ae_fonds_vert$denomination)
 ```
 
-Notre tableau final contient bien le code de la commune et le montant associé aux financements concernant le fonds vert. 
+
+```{r}
+# Vérification que toutes les données soient sur 2023
+table(ae_fonds_vert$annee)
+```
+
+Ce tableau nous montre que le programme du fonds vert ne contient des données seulement pour l'année 2023. Nous allons nous intéresser au code INSEE de la commune du SIRET et le montant du financement. 
+
+```{r}
+ae_fonds_vert_montant <- ae_fonds_vert %>% 
+  select(code_commune, montant_ae) %>% 
+  group_by(code_commune) %>% 
+  summarize(somme_ae = sum(montant_ae))
+
+head(ae_fonds_vert_montant)
+```
+
+```{r}
+dim(ae_fonds_vert_montant)
+```
+
+Nous allons grouper par commune du SIRET pour avoir une approche communale et pour savoir le nombre de projets par commune.
+
+```{r}
+ae_fonds_vert_nb <- ae_fonds_vert %>%
+  group_by(code_commune) %>%
+  summarize(nb_projets = n())
+
+head(ae_fonds_vert_nb)
+```
+```{r}
+table(ae_fonds_vert_nb$nb_projets)
+```
+
+Puisque nous avons une grande majorité de communes demandant un seul financement, nous allons passer notre variable en binaire : "a demandé un financement / n'a pas demandé de financement"
 
 ```{r}
 ae_fonds_vert_binaire <- ae_fonds_vert %>%
-  select(beneficiaire_commune_code) %>% 
-  group_by(beneficiaire_commune_code) %>%
+  select(code_commune) %>% 
+  group_by(code_commune) %>%
   summarize(beneficiaire = 1)
 
+
 # Conversion pour avoir les mêmes types que dans le fichier communes
-ae_fonds_vert_binaire$beneficiaire_commune_code <- as.character(ae_fonds_vert_binaire$beneficiaire_commune_code)
+ae_fonds_vert_binaire$code_commune <- as.character(ae_fonds_vert_binaire$code_commune)
 ```
 
+Notre tableau final contient bien le code de la commune du SIRET et si la commune a demandé un financement (1)
 
-Pour pouvoir constituer notre variable à expliquer, il nous faut le reste des communes de Bretagne 
+Pour pouvoir constituer notre variable à expliquer, il nous faut le reste des communes de Bretagne pour pouvoir savoir quelles communes n'ont pas fait de demande de financement
 
 ```{r}
 FILE_KEY_S3 <- "Sujet_master/Data/Y/commune2021.csv"
@@ -105,12 +124,8 @@ communes <-
 head(communes)
 ```
 
-On ne conserve que les lignes et colonnes qui nous intéressent 
 
-# VOIR SI C'EST A CONSERVER
---> les siret ne sont pas tous basés en Bretagne donc que faire ? un modèle pour la France entière ? je ne dois conserver que les lignes pour les siret en bretagne ? je ne sais pas trop ???
-
-On filtre d'abord sur la Bretagne
+On filtre d'abord sur la Bretagne pour n'avoir que les communes qui nous intéressent.
 
 ```{r}
 communes <- communes %>% 
@@ -124,17 +139,47 @@ On ajoute une colonne avec la valeur 0
 ```{r}
 communes <- communes %>% 
   mutate(beneficiaire = 0) %>% 
-  rename(beneficiaire_commune_code = COM)
+  rename(code_commune = COM)
 ```
 
-Nous allons maintenant assembler les deux fichiers pour avoir notre variable à expliquer complète
+Nous allons maintenant assembler les deux fichiers pour avoir notre variable à expliquer complète.
+
+
+Règle : si un code INSEE d'une commune apparaît avec la valeur 0 ET la valeur 1 alors on garde seulement la ligne avec la valeur 1 => cela signifie qu'elle a fait une demande de financement
+
 
 ```{r}
-beneficiaires_fonds_vert <- left_join(ae_fonds_vert_binaire, communes,
-                                      by = "beneficiaire_commune_code",
-                                      suffix = c("_ae","_com"))
+beneficiaires_fonds_vert <- merge(ae_fonds_vert_binaire, communes, 
+                                  by = "code_commune", 
+                                  all = TRUE, suffix = c("_ae", "_com"))
+
+# Remplacer les valeurs NA par 0
+beneficiaires_fonds_vert$beneficiaire <- ifelse(is.na(beneficiaires_fonds_vert$beneficiaire_ae), 0, 1)
+
+beneficiaires_fonds_vert <- beneficiaires_fonds_vert %>% 
+  select(code_commune, beneficiaire)
+
+head(beneficiaires_fonds_vert)
 ```
 
+```{r}
+dim(beneficiaires_fonds_vert)
+```
+
+Nous avons bien 1208 communes (nombre de communes en Bretagne)
+Nous allons analyser la distribution des 1 et 0 dans notre variable à expliquer
+
+```{r}
+ggplot(beneficiaires_fonds_vert)+
+  aes(x = beneficiaire)+
+  geom_bar(fill="lightblue")+
+  ggtitle("Nombre de communes ayant demandé un finanement pour le programme 380")
+```
+```{r}
+table(beneficiaires_fonds_vert$beneficiaire)
+```
+
+Nous avons donc des données déséquilibrées à traiter de ce cas là.
 
 
 ## I.2. Variables explicatives
