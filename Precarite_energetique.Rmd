@@ -598,10 +598,22 @@ densite7 <- densite7 %>%
 Il nous manque une commune que nous allons ajouter
 
 ```{r}
+densite7 <- merge(densite7, communes, 
+                                  by.x = "codgeo", by.y = "code_commune",
+                                  all = TRUE, suffix = c("_friche", "_com"))
 
+# On ne garde que les communes en Bretagne
+densite7 <- densite7 %>%
+  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
+
+# Si le nombre de friches est NA alors on remplace par 0
+densite7$gridens7 <- ifelse(is.na(densite7$gridens7), 0, 1)
+
+densite7 <- densite7 %>% 
+  select(codgeo, gridens7)
+
+head(densite7)
 ```
-
-
 
 Nous allons ensuite importer les données concernant la superficie de chaque commune
 
@@ -632,12 +644,37 @@ superficie <- superficie %>%
 head(superficie)
 ```
 
+Nous allons sélectionner les données pour les communes de Bretagne
 
+```{r}
+superficie <- superficie %>%
+  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56"))
+```
+
+Nous ajoutons la commune manquante
+
+
+```{r}
+superficie <- merge(superficie, communes, 
+                                  by.x = "codgeo", by.y = "code_commune",
+                                  all = TRUE, suffix = c("_superficie", "_com"))
+
+# On ne garde que les communes en Bretagne
+superficie <- superficie %>%
+  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
+
+# Si la superficie est NA alors on remplace par NA
+superficie$superf_choro <- ifelse(is.na(superficie$superf_choro), NA, 1)
+
+superficie <- superficie %>% 
+  select(codgeo, superf_choro)
+
+head(superficie)
+```
 
 ### I.2.D. Transport
 
 Nous allons maintenant importer des données concernant la thématique du transport.
-
 
 ```{r}
 FILE_KEY_S3 <- "Sujet_master/Data/X/Transport/arret_ferroviaire.csv"
