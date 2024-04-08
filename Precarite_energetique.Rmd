@@ -273,19 +273,9 @@ Tout d'abord, nous allons nous focaliser sur le DPE des logements. Le Diagnostic
 
 
 ```{r}
-library(httr)
-library(jsonlite)
-
-# URL API
-url_logements_existants <- "https://data.ademe.fr/data-fair/api/v1/datasets/dpe-v2-logements-existants/lines"
-limite <- 10000
-all_data <- tibble()
-offset <- 0
-
 
 ```
 
-Nous allons exporter ce fichier csv car il est très lourd, nous n'aurons pas à refaire la manipulation plusieurs fois.
 
 
 Nous allons maintenant nous intéresser à la base de données "cartofriches". Elle permet de référencer des sites potentiellement en friche. Le terme de « friches » est pris ici dans le sens d’espaces artificialisés et inoccupés.
@@ -301,13 +291,33 @@ fichier_friches <-
     opts = list("region" = "")
   )
 
-friches <- fichier_friches %>% 
+possede_friches <- fichier_friches %>% 
   select(comm_insee) %>% 
-  mutate(friche = 1)
+  group_by(comm_insee) %>% 
+  summarize(nb_friches = n())
   
+  
+head(possede_friches)
+```
+Pour avoir le reste des communes de la France, nous allons ajouter des 0 sur les lignes où on a pas de valeur
+
+```{r}
+friches <- merge(possede_friches, communes, 
+                                  by.x = "comm_insee", by.y = "code_commune",
+                                  all = TRUE, suffix = c("_friche", "_com"))
+
+# On ne garde que les communes en Bretagne
+friches <- friches %>%
+  filter(substr(comm_insee, 1, 2) %in% c("22", "29", "35", "56")) 
+
+# Si le nombre de friches est NA alors on remplace par 0
+friches$friche <- ifelse(is.na(friches$nb_friches), 0, 1)
+
+friches <- friches %>% 
+  select(comm_insee, friche)
+
 head(friches)
 ```
-
 
 
 La démarche ÉcoQuartier, portée par le Ministère de la Transition écologique et de la Cohésion des Territoires, favorise de nouvelles façons de concevoir, construire et gérer la ville durablement. 
@@ -328,26 +338,44 @@ head(eco_quartiers)
 ```
 
 On conserve seulement la colonnes qui nous intéresse pour notre étude : le code INSEE. On considère que si la commune apparaît, alors elle porte / fait partie d'un projet d'écoquartiers. 
---> Je ne suis pas rentrée dans les détails car la base de données est très détaillée. 
 
 ```{r}
 eco_quartiers <- eco_quartiers %>% 
   select(`Code INSEE`) %>% 
-  mutate(ecoquartiers= 1)
+  group_by(`Code INSEE`) %>% 
+  mutate(ecoquartiers= n())
 
 head(eco_quartiers)
 ```
 
-Pour avoir une idée des communes favorisant le plus les écoquartiers, nous allons sommer pour obtenir le nombre d'écoquartiers labellisés dans les communes. 
+Nous allons ajouter les communes ne présentant pas d'écoquartiers 
 
 ```{r}
-eco_quartiers_nb <- eco_quartiers %>% 
-  group_by(`Code INSEE`) %>% 
-  summarize(nb_ecoquartiers = sum(ecoquartiers))
+communes_eco_quartiers <- merge(eco_quartiers, communes, 
+                                  by.x = "Code INSEE", by.y = "code_commune", 
+                                  all = TRUE, suffix = c("_ecoquartiers", "_com"))
 
-head(eco_quartiers_nb)
+# Remplacer les valeurs NA par 0
+communes_eco_quartiers$beneficiaire <- ifelse(is.na(communes_eco_quartiers$ecoquartiers), 0, 1)
+
+communes_eco_quartiers <- communes_eco_quartiers %>% 
+  select(`Code INSEE`, beneficiaire) %>% 
+  rename(ecoquartiers = beneficiaire)
+
+head(communes_eco_quartiers)
+```
+On ne conserve que les communes de Bretagne
+
+```{r}
+communes_eco_quartiers <- communes_eco_quartiers %>% 
+  filter(substr(`Code INSEE`, 1, 2) %in% c("22", "29", "35", "56")) 
 ```
 
+On va supprimer les doublons : on considère cette variable comme une variable binaire donc on ne comptabilise pas le nombre d'éco-quartiers
+
+```{r}
+communes_eco_quartiers <- distinct(communes_eco_quartiers)
+```
 
 ### I.2.C. Urbanisme
 
@@ -380,10 +408,27 @@ zonages_prog <- zonages_prog %>%
 head(zonages_prog)
 ```
 
-On note que les données sont légèrement déséquilibrées (faire attention pour la suite)
+On conserve les communes de Bretagne
 
 ```{r}
-table(zonages_prog$beneficiaire_prog)
+zonages_prog <- zonages_prog %>% 
+  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
+```
+
+On ajoute la commune manquante au document
+
+```{r}
+zonages_prog <- merge(zonages_prog, communes, 
+                                  by.x = "codgeo",  by.y = "code_commune", 
+                                  all = TRUE, suffix = c("_ae", "_com"))
+
+# Remplacer les valeurs NA par 0
+zonages_prog$beneficiaire_prog_zonages <- ifelse(is.na(zonages_prog$beneficiaire_prog), NA, 1)
+
+zonages_prog <- zonages_prog %>% 
+  select(codgeo, beneficiaire_prog_zonages)
+
+head(zonages_prog)
 ```
 
 On importe ensuite les données concernant les communes couvertes par les CRTE 
@@ -407,11 +452,35 @@ On ne conserve seulement que la colonne avec le code commune et on ajoute une co
 ```{r}
 liste_crte <- liste_crte %>% 
   select(1) %>% 
+  group_by(insee_com) %>% 
   mutate("couverte_crte" = 1)
 
 head(liste_crte)
-  
 ```
+
+Nous allons seulement conserver les communes de Bretagne
+
+```{r}
+liste_crte <- liste_crte %>% 
+  filter(substr(insee_com, 1, 2) %in% c("22", "29", "35", "56")) 
+```
+
+Nous avons deux communes manquantes que nous allons ajouter
+
+```{r}
+communes_crte <- merge(liste_crte, communes, 
+                                  by.x = "insee_com",  by.y = "code_commune", 
+                                  all = TRUE, suffix = c("_crte", "_com"))
+
+# Remplacer les valeurs NA par 0
+communes_crte$couverte_crte <- ifelse(is.na(communes_crte$couverte_crte), NA, 1)
+
+communes_crte <- communes_crte %>% 
+  select(insee_com, couverte_crte)
+
+head(communes_crte)
+```
+
 
 Nous allons à présent importer les données pour savoir si la commune est concernée par la loi littoral (COG de 2022)
 
@@ -459,6 +528,31 @@ table(loi_littoral$CLASSEMENT)
 head(loi_littoral)
 ```
 
+Nous allons conserver les communes de Bretagne
+
+```{r}
+loi_littoral <- loi_littoral %>% 
+  filter(substr(INSEE_COM, 1, 2) %in% c("22", "29", "35", "56")) 
+
+dim(loi_littoral)
+```
+
+On remarque que nous avons seulement 264 communes de Bretagne, nous allons donc devoir compléter par des valeurs manquantes
+
+```{r}
+loi_littoral <- merge(loi_littoral, communes, 
+                                  by.x = "INSEE_COM", by.y = "code_commune", 
+                                  all = TRUE, suffix = c("_littoral", "_com"))
+
+# Remplacer les valeurs NA par 0
+loi_littoral$climat <- ifelse(is.na(loi_littoral$CLASSEMENT), NA, 1)
+
+loi_littoral <- loi_littoral %>% 
+  select(INSEE_COM, climat) 
+
+head(loi_littoral)
+```
+
 
 Nous allons ensuite importer les données qui décrivent la grille communale de densité en 7 niveaux : 
 - niveau 1 : Grands centres urbains
@@ -492,6 +586,19 @@ densite7 <- densite7 %>%
   select(1,3)
 
 head(densite7)
+```
+
+Nous allons conserver seulement les communes de Bretagne
+
+```{r}
+densite7 <- densite7 %>%
+  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
+```
+
+Il nous manque une commune que nous allons ajouter
+
+```{r}
+
 ```
 
 
