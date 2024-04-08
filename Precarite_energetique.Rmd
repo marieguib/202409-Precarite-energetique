@@ -94,6 +94,8 @@ table(ae_fonds_vert_nb$nb_projets)
 ```
 
 Puisque nous avons une grande majorité de communes demandant un seul financement, nous allons passer notre variable en binaire : "a demandé un financement / n'a pas demandé de financement"
+- Valeur 1 : a demandé un financement
+- Valeur 0 : n'a pas demandé de financement
 
 ```{r}
 ae_fonds_vert_binaire <- ae_fonds_vert %>%
@@ -157,7 +159,8 @@ beneficiaires_fonds_vert <- merge(ae_fonds_vert_binaire, communes,
 beneficiaires_fonds_vert$beneficiaire <- ifelse(is.na(beneficiaires_fonds_vert$beneficiaire_ae), 0, 1)
 
 beneficiaires_fonds_vert <- beneficiaires_fonds_vert %>% 
-  select(code_commune, beneficiaire)
+  select(code_commune, beneficiaire) %>% 
+  rename(beneficiaire_prog = beneficiaire)
 
 head(beneficiaires_fonds_vert)
 ```
@@ -167,13 +170,14 @@ dim(beneficiaires_fonds_vert)
 ```
 
 Nous avons bien 1208 communes (nombre de communes en Bretagne)
+
 Nous allons analyser la distribution des 1 et 0 dans notre variable à expliquer
 
 ```{r}
 ggplot(beneficiaires_fonds_vert)+
-  aes(x = beneficiaire)+
+  aes(x = beneficiaire_prog)+
   geom_bar(fill="lightblue")+
-  ggtitle("Nombre de communes ayant demandé un finanement pour le programme 380")
+  ggtitle("Nombre de communes ayant demandé un financement pour le programme 380")
 ```
 ```{r}
 table(beneficiaires_fonds_vert$beneficiaire)
@@ -192,24 +196,74 @@ Nous allons à présent passer à l'importation des différentes variables expli
 Nous allons importer les données de consommation annuelle d'électricité et de gaz
 
 ```{r}
-FILE_KEY_S3 <- "Sujet_master/Data/..............."
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/conso-elec-gaz-annuelle-par-secteur-dactivite-agregee-commune.csv"
 
 conso_elec_gaz <- 
   aws.s3::s3read_using(
     FUN = read.csv, 
+    sep = ";",
     object = FILE_KEY_S3,
     bucket = BUCKET,
     opts = list("region" = "")
   )
- 
+```
+
+Nous allons ensuite filtrer pour n'avoir que les lignes concernant la Bretagne
+
+```{r}
+conso_elec_gaz <- conso_elec_gaz %>% 
+  filter(Code.Région == 53) %>% 
+  filter(Opérateur == "Enedis")
+```
+
+Ensuite, nous allons faire la moyenne pour n'avoir qu'un seul chiffre par commune
+
+```{r}
+conso_agriculture <- conso_elec_gaz %>% 
+  select(Année,`Code.Commune`,`Consommation.Agriculture..MWh.`) %>% 
+  group_by(`Code.Commune`) %>%
+  summarize(moyenne_conso_agri = mean(`Consommation.Agriculture..MWh.`))
 ```
 
 ```{r}
-
+conso_industrie <- conso_elec_gaz %>% 
+  select(Année,`Code.Commune`, `Consommation.Industrie..MWh.`) %>% 
+  group_by(`Code.Commune`) %>%
+  summarize(moyenne_conso_indus = mean(`Consommation.Industrie..MWh.`))
 ```
 
+```{r}
+conso_tertiaire <- conso_elec_gaz %>% 
+  select(Année,`Code.Commune`,`Consommation.Tertiaire...MWh.`) %>% 
+  group_by(`Code.Commune`) %>%
+  summarize(moyenne_conso_tertiaire = mean(`Consommation.Tertiaire...MWh.`))
+```
 
+```{r}
+conso_residentiel <- conso_elec_gaz %>% 
+  select(Année,`Code.Commune`, `Consommation.Résidentiel...MWh.`)%>% 
+  group_by(`Code.Commune`) %>%
+  summarize(moyenne_conso_residentiel = mean(`Consommation.Résidentiel...MWh.`))
+```
 
+```{r}
+conso_totale <- conso_elec_gaz %>% 
+  select(Année,`Code.Commune`, `Consommation.totale..MWh.`)%>% 
+  group_by(`Code.Commune`) %>%
+  summarize(moyenne_conso_totale = mean(`Consommation.totale..MWh.`))
+```
+
+Nous avons bien le bon nombre de lignes pour chaque variable. Nous allons vérifier s'il y a des valeurs manquantes
+
+```{r}
+sum(is.na(conso_agriculture))
+sum(is.na(conso_industrie))
+sum(is.na(conso_residentiel))
+sum(is.na(conso_tertiaire))
+sum(is.na(conso_totale))
+```
+
+Nous n'avons pas de données manquantes donc on peut continuer l'étude
 
 ### I.2.B. Logement
 
