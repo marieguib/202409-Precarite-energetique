@@ -196,7 +196,7 @@ Nous allons à présent passer à l'importation des différentes variables expli
 Nous allons importer les données de consommation annuelle d'électricité et de gaz
 
 ```{r}
-FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/conso-elec-gaz-annuelle-par-secteur-dactivite-agregee-commune.csv"
+FILE_KEY_S3 <- "Sujet_master/Data/X/Energie/conso-elec-gaz-annuelle-par-secteur-dactivite-agregee-commune.csv"
 
 conso_elec_gaz <- 
   aws.s3::s3read_using(
@@ -869,6 +869,47 @@ elus <-
 
 head(elus)
 ```
+
+On ne conserve que les lignes pour la région Bretagne
+
+```{r}
+elus <- elus %>% 
+  filter(`Code.du.département` == "35" | `Code.du.département` == "22" |`Code.du.département` == "29" | `Code.du.département` == "56") %>% 
+  filter( `Libellé.de.la.fonction` == "Maire") %>% 
+  select(`Code.de.la.commune`, `Code.de.la.catégorie.socio.professionnelle`, `Libellé.de.la.catégorie.socio.professionnelle`, `Libellé.de.la.fonction`)
+```
+
+On ne garde que le code et le code de la CSP 
+
+```{r}
+elus <- elus %>% 
+  select(1,2) %>% 
+  rename(code_insee = `Code.de.la.commune`, 
+         CSP_maire = `Code.de.la.catégorie.socio.professionnelle`)
+```
+
+On récupère les communes manquantes pour la région Bretagne
+
+```{r}
+elus <- merge(elus, communes,
+               by.x = "code_insee",  by.y = "code_commune",
+               all = TRUE, suffix = c("_elus", "_com"))
+
+# Mettre 0 pour les valeurs non renseignées
+elus$CSP_maire <- ifelse(is.na(elus$CSP_maire), NA, elus$CSP_maire)
+
+# On ne conserve que les communes de Bretagne
+elus <- elus %>%
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56")) 
+
+elus <- elus %>% 
+  select(code_insee, CSP_maire)
+
+head(elus)
+```
+
+
+
 
 ## I.3. Constitution de la base de données
 
