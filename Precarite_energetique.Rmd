@@ -311,7 +311,7 @@ friches <- friches %>%
   filter(substr(comm_insee, 1, 2) %in% c("22", "29", "35", "56")) 
 
 # Si le nombre de friches est NA alors on remplace par 0
-friches$friche <- ifelse(is.na(friches$nb_friches), 0, 1)
+friches$friche <- ifelse(is.na(friches$nb_friches), 0, friches$nb_friches)
 
 friches <- friches %>% 
   select(comm_insee, friche)
@@ -420,9 +420,9 @@ On ajoute la commune manquante au document
 ```{r}
 zonages_prog <- merge(zonages_prog, communes, 
                                   by.x = "codgeo",  by.y = "code_commune", 
-                                  all = TRUE, suffix = c("_ae", "_com"))
+                                  all = TRUE, suffix = c("_zonages", "_com"))
 
-# Remplacer les valeurs NA par 0
+# Mettre NA pour les valeurs non renseignées
 zonages_prog$beneficiaire_prog_zonages <- ifelse(is.na(zonages_prog$beneficiaire_prog), NA, 1)
 
 zonages_prog <- zonages_prog %>% 
@@ -472,8 +472,8 @@ communes_crte <- merge(liste_crte, communes,
                                   by.x = "insee_com",  by.y = "code_commune", 
                                   all = TRUE, suffix = c("_crte", "_com"))
 
-# Remplacer les valeurs NA par 0
-communes_crte$couverte_crte <- ifelse(is.na(communes_crte$couverte_crte), NA, 1)
+# Mettre 0 pour les valeurs non renseignées
+communes_crte$couverte_crte <- ifelse(is.na(communes_crte$couverte_crte), 0, 1)
 
 communes_crte <- communes_crte %>% 
   select(insee_com, couverte_crte)
@@ -544,7 +544,7 @@ loi_littoral <- merge(loi_littoral, communes,
                                   by.x = "INSEE_COM", by.y = "code_commune", 
                                   all = TRUE, suffix = c("_littoral", "_com"))
 
-# Remplacer les valeurs NA par 0
+# Mettre NA pour les valeurs non renseignées
 loi_littoral$climat <- ifelse(is.na(loi_littoral$CLASSEMENT), NA, 1)
 
 loi_littoral <- loi_littoral %>% 
@@ -600,14 +600,14 @@ Il nous manque une commune que nous allons ajouter
 ```{r}
 densite7 <- merge(densite7, communes, 
                                   by.x = "codgeo", by.y = "code_commune",
-                                  all = TRUE, suffix = c("_friche", "_com"))
+                                  all = TRUE, suffix = c("_densite", "_com"))
 
 # On ne garde que les communes en Bretagne
 densite7 <- densite7 %>%
   filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
 
-# Si le nombre de friches est NA alors on remplace par 0
-densite7$gridens7 <- ifelse(is.na(densite7$gridens7), 0, 1)
+# Mettre NA pour les valeurs non renseignées
+densite7$gridens7 <- ifelse(is.na(densite7$gridens7), NA, 1)
 
 densite7 <- densite7 %>% 
   select(codgeo, gridens7)
@@ -653,7 +653,6 @@ superficie <- superficie %>%
 
 Nous ajoutons la commune manquante
 
-
 ```{r}
 superficie <- merge(superficie, communes, 
                                   by.x = "codgeo", by.y = "code_commune",
@@ -664,7 +663,7 @@ superficie <- superficie %>%
   filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
 
 # Si la superficie est NA alors on remplace par NA
-superficie$superf_choro <- ifelse(is.na(superficie$superf_choro), NA, 1)
+superficie$superf_choro <- ifelse(is.na(superficie$superf_choro), NA, superficie$superf_choro)
 
 superficie <- superficie %>% 
   select(codgeo, superf_choro)
@@ -712,6 +711,41 @@ Il faut supprimer les doublons => garder O si O et N sinon 0
 length(unique(gares$code_insee))
 ```
 
+Nous allons seulement conserver les communes de Bretagne
+
+```{r}
+gares <- gares %>%
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56")) 
+```
+
+Pour avoir seulement une variable binaire, nous allons grouper par code insee et mettre la valeur 1 quand il y a un arrêt ferroviaire
+
+```{r}
+gares <- gares %>%
+  group_by(code_insee) %>%
+  summarize(tgv = 1)
+```
+
+Nous allons récupérer le reste des communes bretonnes
+
+```{r}
+gares <- merge(gares, communes,
+               by.x = "code_insee",  by.y = "code_commune",
+               all = TRUE, suffix = c("_gares", "_com"))
+
+# Mettre 0 pour les valeurs non renseignées
+gares$gare_tgv <- ifelse(is.na(gares$tgv), 0, 1)
+
+# On ne conserve que les communes de Bretagne
+gares <- gares %>%
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56")) 
+
+gares <- gares %>% 
+  select(code_insee, gare_tgv)
+
+head(gares)
+```
+
 
 ### I.2.E. Population / Economie / Emploi
 
@@ -737,6 +771,35 @@ On sélectionne les variables qui nous intéresse pour la suite
 revenu_dispo <- revenu_dispo %>% 
   select(codgeo, med_disp)
 ```
+
+On ne conserve que les données de la région Bretagne
+
+```{r}
+revenu_dispo <- revenu_dispo %>%
+  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
+```
+
+Il nous manque une commune donc on fait une jointure avec le fichier des communes pour la récupérer
+
+```{r}
+revenu_dispo <- merge(revenu_dispo, communes,
+               by.x = "codgeo",  by.y = "code_commune",
+               all = TRUE, suffix = c("_revenu_dispo", "_com"))
+
+# Mettre NA pour les valeurs non renseignées
+revenu_dispo$med_disp <- ifelse(is.na(revenu_dispo$med_disp), NA, revenu_dispo$med_disp)
+
+
+# On ne conserve que les communes de Bretagne
+revenu_dispo <- revenu_dispo %>%
+  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
+
+ revenu_dispo <- revenu_dispo %>% 
+  select(codgeo, med_disp)
+
+head(revenu_dispo)
+```
+
 
 Nous allons maintenant importer les données de population
 
@@ -764,6 +827,33 @@ pop <- pop %>%
 head(pop)
 ```
 
+Nous ne gardons que les communes de Bretagne
+
+```{r}
+pop <- pop %>%
+  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
+```
+
+Il nous manque une commune que nous allons ajouter
+
+```{r}
+pop <- merge(pop, communes,
+               by.x = "codgeo",  by.y = "code_commune",
+               all = TRUE, suffix = c("_revenu_dispo", "_com"))
+
+# Remplacer les valeurs NA par 0
+pop$pop_commune <- ifelse(is.na(pop$p_pop), NA, pop$med_disp)
+
+# On ne conserve que les communes de Bretagne
+pop <- pop %>%
+  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
+
+ pop <- pop %>% 
+  select(codgeo, p_pop)
+
+head(pop)
+```
+
 Nous allons maintenant importer des données un peu plus sensibles : les maires en 2023
 
 ```{r}
@@ -778,6 +868,12 @@ elus <-
   )
 
 head(elus)
+```
+
+## I.3. Constitution de la base de données
+
+```{r}
+
 ```
 
 
