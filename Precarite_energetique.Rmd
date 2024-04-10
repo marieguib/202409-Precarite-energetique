@@ -171,6 +171,14 @@ dim(beneficiaires_fonds_vert)
 
 Nous avons bien 1208 communes (nombre de communes en Bretagne)
 
+```{r}
+# Renommage de la colonne pour le code commune en code INSEE
+beneficiaires_fonds_vert <- beneficiaires_fonds_vert %>% 
+  rename(code_insee = code_commune)
+```
+
+
+
 Nous allons analyser la distribution des 1 et 0 dans notre variable à expliquer
 
 ```{r}
@@ -223,6 +231,11 @@ conso_agriculture <- conso_elec_gaz %>%
   select(Année,`Code.Commune`,`Consommation.Agriculture..MWh.`) %>% 
   group_by(`Code.Commune`) %>%
   summarize(moyenne_conso_agri = mean(`Consommation.Agriculture..MWh.`))
+
+conso_agriculture <- conso_agriculture %>% 
+  rename(code_insee = Code.Commune)
+
+head(conso_agriculture)
 ```
 
 ```{r}
@@ -230,6 +243,10 @@ conso_industrie <- conso_elec_gaz %>%
   select(Année,`Code.Commune`, `Consommation.Industrie..MWh.`) %>% 
   group_by(`Code.Commune`) %>%
   summarize(moyenne_conso_indus = mean(`Consommation.Industrie..MWh.`))
+
+conso_industrie <- conso_industrie %>% 
+  rename(code_insee = Code.Commune)
+
 ```
 
 ```{r}
@@ -237,6 +254,9 @@ conso_tertiaire <- conso_elec_gaz %>%
   select(Année,`Code.Commune`,`Consommation.Tertiaire...MWh.`) %>% 
   group_by(`Code.Commune`) %>%
   summarize(moyenne_conso_tertiaire = mean(`Consommation.Tertiaire...MWh.`))
+
+conso_tertiaire <- conso_tertiaire %>% 
+  rename(code_insee = Code.Commune)
 ```
 
 ```{r}
@@ -244,6 +264,9 @@ conso_residentiel <- conso_elec_gaz %>%
   select(Année,`Code.Commune`, `Consommation.Résidentiel...MWh.`)%>% 
   group_by(`Code.Commune`) %>%
   summarize(moyenne_conso_residentiel = mean(`Consommation.Résidentiel...MWh.`))
+
+conso_residentiel <- conso_residentiel %>% 
+  rename(code_insee = Code.Commune)
 ```
 
 ```{r}
@@ -251,6 +274,10 @@ conso_totale <- conso_elec_gaz %>%
   select(Année,`Code.Commune`, `Consommation.totale..MWh.`)%>% 
   group_by(`Code.Commune`) %>%
   summarize(moyenne_conso_totale = mean(`Consommation.totale..MWh.`))
+
+
+conso_totale <- conso_totale %>% 
+  rename(code_insee = Code.Commune)
 ```
 
 Nous avons bien le bon nombre de lignes pour chaque variable. Nous allons vérifier s'il y a des valeurs manquantes
@@ -319,6 +346,13 @@ friches <- friches %>%
 head(friches)
 ```
 
+```{r}
+# Renommage de la colonne pour le code insee
+friches <- friches %>% 
+  rename(code_insee = comm_insee)
+```
+
+
 
 La démarche ÉcoQuartier, portée par le Ministère de la Transition écologique et de la Cohésion des Territoires, favorise de nouvelles façons de concevoir, construire et gérer la ville durablement. 
 Cette variable m'a donc paru importante à inclure dans le programme du fonds vert. 
@@ -377,6 +411,12 @@ On va supprimer les doublons : on considère cette variable comme une variable b
 communes_eco_quartiers <- distinct(communes_eco_quartiers)
 ```
 
+```{r}
+communes_eco_quartiers <- communes_eco_quartiers %>% 
+  rename(code_insee = `Code INSEE`)
+```
+
+
 ### I.2.C. Urbanisme
 
 Nous allons importer le fichier qui recense les villages d'avenir (communes qui sont bénéficiaires d'un programme : PVD, ACV, ...)
@@ -431,6 +471,12 @@ zonages_prog <- zonages_prog %>%
 head(zonages_prog)
 ```
 
+```{r}
+zonages_prog <- zonages_prog %>% 
+  rename(code_insee = codgeo)
+```
+
+
 On importe ensuite les données concernant les communes couvertes par les CRTE 
 
 ```{r message = FALSE}
@@ -479,6 +525,11 @@ communes_crte <- communes_crte %>%
   select(insee_com, couverte_crte)
 
 head(communes_crte)
+```
+
+```{r}
+communes_crte <- communes_crte %>% 
+  rename(code_insee = insee_com)
 ```
 
 
@@ -553,6 +604,11 @@ loi_littoral <- loi_littoral %>%
 head(loi_littoral)
 ```
 
+```{r}
+loi_littoral <- loi_littoral %>% 
+  rename(code_insee = INSEE_COM)
+```
+
 
 Nous allons ensuite importer les données qui décrivent la grille communale de densité en 7 niveaux : 
 - niveau 1 : Grands centres urbains
@@ -615,6 +671,12 @@ densite7 <- densite7 %>%
 head(densite7)
 ```
 
+```{r}
+densite7 <- densite7 %>% 
+  rename(code_insee = codgeo)
+```
+
+
 Nous allons ensuite importer les données concernant la superficie de chaque commune
 
 ```{r message = FALSE}
@@ -669,6 +731,11 @@ superficie <- superficie %>%
   select(codgeo, superf_choro)
 
 head(superficie)
+```
+
+```{r}
+superficie <- superficie %>% 
+  rename(code_insee = codgeo)
 ```
 
 ### I.2.D. Transport
@@ -787,7 +854,7 @@ revenu_dispo <- merge(revenu_dispo, communes,
                all = TRUE, suffix = c("_revenu_dispo", "_com"))
 
 # Mettre NA pour les valeurs non renseignées
-revenu_dispo$med_disp <- ifelse(is.na(revenu_dispo$med_disp), NA, revenu_dispo$med_disp)
+revenu_dispo$med_revenu_dispo <- ifelse(is.na(revenu_dispo$med_disp), NA, revenu_dispo$med_disp)
 
 
 # On ne conserve que les communes de Bretagne
@@ -795,9 +862,14 @@ revenu_dispo <- revenu_dispo %>%
   filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
 
  revenu_dispo <- revenu_dispo %>% 
-  select(codgeo, med_disp)
+  select(codgeo, med_revenu_dispo)
 
 head(revenu_dispo)
+```
+
+```{r}
+revenu_dispo <- revenu_dispo %>% 
+  rename(code_insee = codgeo)
 ```
 
 
@@ -842,7 +914,7 @@ pop <- merge(pop, communes,
                all = TRUE, suffix = c("_revenu_dispo", "_com"))
 
 # Remplacer les valeurs NA par 0
-pop$pop_commune <- ifelse(is.na(pop$p_pop), NA, pop$med_disp)
+pop$pop_commune <- ifelse(is.na(pop$p_pop), NA, pop$p_pop)
 
 # On ne conserve que les communes de Bretagne
 pop <- pop %>%
@@ -853,6 +925,12 @@ pop <- pop %>%
 
 head(pop)
 ```
+
+```{r}
+pop <- pop %>% 
+  rename(code_insee = codgeo)
+```
+
 
 Nous allons maintenant importer des données un peu plus sensibles : les maires en 2023
 
@@ -913,7 +991,18 @@ head(elus)
 
 ## I.3. Constitution de la base de données
 
+Nous allons maintenant constituer notre base de données pour pouvoir avoir toutes les informations dans un seul et même dataframe
+
 ```{r}
+liste_dataframes <- list(conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, 
+friches, communes_eco_quartiers, zonages_prog, communes_crte, loi_littoral, 
+densite7,  superficie, gares, revenu_dispo, pop, elus)
+
+
+df_final <- Reduce(function(x, y) merge(x, y, by = "code_insee", all = TRUE), liste_dataframes)
+
+# Affichage du dataframe final
+print(df_final)
 
 ```
 
