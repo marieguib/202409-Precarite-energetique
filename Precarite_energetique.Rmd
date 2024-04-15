@@ -11,7 +11,7 @@ output:
 # Environnement de travail
 
 
-```{r message = FALSE}
+```{r message = FALSE, warning = FALSE}
 library(aws.s3)
 library(dplyr)
 library(stringr)
@@ -469,10 +469,12 @@ zonages_prog <- merge(zonages_prog, communes,
                                   all = TRUE, suffix = c("_zonages", "_com"))
 
 # Mettre NA pour les valeurs non renseignées
-zonages_prog$beneficiaire_prog_zonages <- ifelse(is.na(zonages_prog$beneficiaire_prog), NA, 1)
+zonages_prog$beneficiaire_prog_zonages <- ifelse(is.na(zonages_prog$beneficiaire_prog), NA, zonages_prog$beneficiaire_prog)
 
 zonages_prog <- zonages_prog %>% 
   select(codgeo, beneficiaire_prog_zonages)
+
+zonages_prog$beneficiaire_prog_zonages <- factor(zonages_prog$beneficiaire_prog_zonages)
 
 head(zonages_prog)
 ```
@@ -602,10 +604,12 @@ loi_littoral <- merge(loi_littoral, communes,
                                   all = TRUE, suffix = c("_littoral", "_com"))
 
 # Mettre NA pour les valeurs non renseignées
-loi_littoral$climat <- ifelse(is.na(loi_littoral$CLASSEMENT), NA, 1)
+loi_littoral$climat <- ifelse(is.na(loi_littoral$CLASSEMENT), NA, loi_littoral$CLASSEMENT)
 
 loi_littoral <- loi_littoral %>% 
   select(INSEE_COM, climat) 
+
+loi_littoral$climat <- factor(loi_littoral$climat)
 
 head(loi_littoral)
 ```
@@ -669,10 +673,12 @@ densite7 <- densite7 %>%
   filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
 
 # Mettre NA pour les valeurs non renseignées
-densite7$gridens7 <- ifelse(is.na(densite7$gridens7), NA, 1)
+densite7$gridens7 <- ifelse(is.na(densite7$gridens7), NA, densite7$gridens7)
 
 densite7 <- densite7 %>% 
   select(codgeo, gridens7)
+
+densite7$gridens7 <- factor(densite7$gridens7)
 
 head(densite7)
 ```
@@ -1021,6 +1027,12 @@ prog380 <- df_final[,1] # variable à expliquer
 don <- df_final[,2:17] # variable explicative
 ```
 
+```{r}
+don$climat <- as.numeric(don$climat)
+don$gridens7 <- as.numeric(don$gridens7)
+don$beneficiaire_prog_zonages <- as.numeric(don$beneficiaire_prog_zonages)
+```
+
 
 ### I.4.1. Visualisation
 
@@ -1070,13 +1082,20 @@ plot(resMCA, invis="ind", title="Analyse de correspondance multiple pour visuali
 ```{r}
 # Imputation avec amelia
 res.amelia <- amelia(don,m=100,p2s=0)
+```
 
+```{r}
 # Imputation avec mice
 res.mice <- mice(don,m=100,defaultMethod="norm", printFlag=F) # here the variability of the regression parameters is obtained by bootstrap
+```
 
+```{r}
 # Imputation avec missMDA
 res.MIPCA <- MIPCA(don,ncp=2)
 ```
+
+
+
 ```{r}
 ## Checking and visualization of the imputations 
 plot(res.amelia)
