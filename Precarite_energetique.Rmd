@@ -15,6 +15,12 @@ output:
 library(aws.s3)
 library(dplyr)
 library(stringr)
+library(ggplot2)
+library(VIM) # valeurs manquantes
+library(FactoMineR)
+library(Amelia) # analyse factorielle
+library(mice)
+library(missMDA)
 ```
 
 # I. Importations et traitements des données
@@ -54,7 +60,7 @@ Nous avons 232 bénéficiaires et 68 colonnes. Pour continuer notre analyse nous
 table(str_length(ae_fonds_vert$beneficiaire_code))
 ```
 
-```{r}
+```{r include=FALSE}
 # Vérification qu'on ait que des communes
 table(ae_fonds_vert$denomination)
 ```
@@ -1006,16 +1012,103 @@ print(df_final)
 
 ```
 
+## I.4. Gestion des valeurs manquantes
+
+Nous allons d'abord séparer la variable à expliquer et la variable explicative de notre jeu de données
+
+```{r}
+prog380 <- df_final[,1] # variable à expliquer
+don <- df_final[,2:17] # variable explicative
+```
+
+
+### I.4.1. Visualisation
+
+Premièrement, nous allons visualiser les données manquantes pour essayer de savoir s'il y a une structure. Pour cela, nous allons construire un graphique qui présente la répartition des valeurs manquantes pour chaque variable de nos données
+
+```{r}
+aggr(don,only.miss=TRUE,sortVar=TRUE)
+```
+La variable climat présente un grand nombre de valeurs manquantes par rapport aux autres variables
+
+Résumé des combinaisons de données manquantes :
+
+```{r}
+res <- summary(aggr(don,prop=TRUE,combined=TRUE))$combinations
+res[rev(order(res[,2])),]
+```
+
+Aide :
+Cette séquence de commandes génère un résumé des combinaisons de données manquantes dans l'ensemble de données don. Elle calcule d'abord le résumé en utilisant aggr() avec les options prop=TRUE (pour afficher les pourcentages) et combined=TRUE (pour combiner les résultats pour toutes les variables). Ensuite, elle trie les résultats en fonction du pourcentage de données manquantes dans l'ordre décroissant.
+
+
+```{r}
+# A revoir : pas très bien compris
+matrixplot(don)
+marginplot(don[,c("climat","CSP_maire")])
+```
+Création d'un ensemble de données catégorielles avec des indicateurs 'o' pour observé et 'm' pour manquant :
+
+```{r}
+mis.ind <- matrix("o", nrow=nrow(don), ncol=ncol(don))
+mis.ind[is.na(don)] <- "m"
+dimnames(mis.ind) <- dimnames(don)
+```
+
+Analyse de correspondance multiple (MCA) sur l'ensemble de données mis.ind pour visualiser l'association entre les variables catégorielles 'o' et 'm'.
+
+```{r}
+options(ggrepel.max.overlaps = Inf)
+resMCA <- MCA(mis.ind)
+plot(resMCA, invis="ind", title="Analyse de correspondance multiple pour visualiser l'association entre les variables catégorielle", max.overlaps = 9500)
+```
+
+
+### I.4.2. Gestion des valeurs manquantes
+
+
+```{r}
+# Imputation avec amelia
+res.amelia <- amelia(don,m=100,p2s=0)
+
+# Imputation avec mice
+res.mice <- mice(don,m=100,defaultMethod="norm", printFlag=F) # here the variability of the regression parameters is obtained by bootstrap
+
+# Imputation avec missMDA
+res.MIPCA <- MIPCA(don,ncp=2)
+```
+```{r}
+## Checking and visualization of the imputations 
+plot(res.amelia)
+par(mfrow=c(1,1))
+compare.density(res.amelia, var="T12")
+overimpute(res.amelia, var="maxO3")
+# visualization with PCA 
+plot(res.MIPCA,choice= "ind.supp"); plot(res.MIPCA,choice="var")
+```
+
+```{r}
+## Pooling the results 
+lm.mice.out <- with(res.mice, lm(maxO3 ~ T9+T12+T15+Ne9+Ne12+Ne15+Vx9+Vx12+Vx15+maxO3v))
+pool.mice <- pool(lm.mice.out)
+resultmice <- summary(pool.mice)
+
+require(mice)
+imp<-prelim(res.mi=res.MIPCA,X=ozone[,1:11])
+fit <- with(data=imp,exp=lm(maxO3~T9+T12+T15+Ne9+Ne12+Ne15+Vx9+Vx12+Vx15+maxO3v))
+res.pool<-pool(fit)
+summary(res.pool)
+```
+
 
 
 # II. Visualisation des données
 
 
-```{r}
-library(ggplot2)
-ggplot(superficie)+
-  aes(x = 1:34945, y = superf_choro)+
-  geom_point()
+ ```{r}
+# ggplot(superficie)+
+#   aes(x = 1:34945, y = superf_choro)+
+#   geom_point()
 ```
 
 
@@ -1023,9 +1116,13 @@ ggplot(superficie)+
 # III. Modélisation statistique
 
 
-## Apprentissage supervisé
 
-## Apprentissage non-supervisé
+
+
+
+## III.1. Apprentissage supervisé
+
+## III.2.Apprentissage non-supervisé
 
 
 # IV. Résultats
