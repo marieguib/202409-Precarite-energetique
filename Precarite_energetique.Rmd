@@ -260,6 +260,12 @@ On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel,
 
 ```{r}
 conso_agriculture <- merge(communes, conso_agriculture, by.x = "code_commune", by.y = "code_insee")
+
+conso_agriculture <- conso_agriculture %>% 
+  rename(code_insee = code_commune)
+
+conso_agriculture <- conso_agriculture %>% 
+  select(1,3)
 ```
 
 ```{r}
@@ -276,6 +282,12 @@ On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel,
 
 ```{r}
 conso_industrie <- merge(communes, conso_industrie, by.x = "code_commune", by.y = "code_insee")
+
+conso_industrie <- conso_industrie %>% 
+  rename(code_insee = code_commune)
+
+conso_industrie <- conso_industrie %>% 
+  select(1,3)
 ```
 
 ```{r}
@@ -292,6 +304,12 @@ On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel,
 
 ```{r}
 conso_tertiaire <- merge(communes, conso_tertiaire, by.x = "code_commune", by.y = "code_insee")
+
+conso_tertiaire <- conso_tertiaire %>% 
+  rename(code_insee = code_commune)
+
+conso_tertiaire <- conso_tertiaire %>% 
+  select(1,3)
 ```
 
 ```{r}
@@ -308,6 +326,12 @@ On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel,
 
 ```{r}
 conso_residentiel <- merge(communes, conso_residentiel, by.x = "code_commune", by.y = "code_insee")
+
+conso_residentiel <- conso_residentiel %>% 
+  rename(code_insee = code_commune)
+
+conso_residentiel <- conso_residentiel %>% 
+  select(1,3)
 ```
 
 ```{r}
@@ -325,6 +349,12 @@ On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel,
 
 ```{r}
 conso_totale <- merge(communes, conso_totale, by.x = "code_commune", by.y = "code_insee")
+
+conso_totale <- conso_totale %>% 
+  rename(code_insee = code_commune)
+
+conso_totale <- conso_totale %>% 
+  select(1,3)
 ```
 
 Nous allons vérifier s'il y a des valeurs manquantes
@@ -995,7 +1025,62 @@ taux_endettement <- taux_endettement %>%
 head(taux_endettement)
 ```
 
-#### e) 
+#### e) Inactifs
+
+Nous allons importer le fichier qui contient le nombre d'inacyifs de 15 à 64 ans en 2020 selon les communes.
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/nb_inactifs_15-64ans.csv"
+
+nb_inactifs <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    sep= ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(nb_inactifs)
+```
+
+```{r}
+nb_inactifs <- nb_inactifs %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "nb_inactifs" = "Nombre.d.inactifs.de.15.64.ans.2020") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+```
+
+
+#### f) Actifs
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/nb_actifs_15-64ans.csv"
+
+nb_actifs <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    sep= ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(nb_actifs)
+```
+
+```{r}
+nb_actifs <- nb_actifs %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "nb_actifs" = "Nombre.d.actifs.de.15.64.ans.2020") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+```
+
+
 
 ## I.3. Constitution de la base de données
 
@@ -1004,7 +1089,7 @@ Nous allons maintenant constituer notre base de données pour pouvoir avoir tout
 ```{r}
 liste_dataframes <- list(conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, 
 friches, communes_eco_quartiers, zonages_prog, communes_crte, loi_littoral, 
-densite7,  superficie, gares, revenu_dispo, pop, elus)
+densite7,  superficie, gares, revenu_dispo, pop, elus,taux_endettement, nb_inactifs, nb_actifs)
 
 
 df_final <- Reduce(function(x, y) merge(x, y, by = "code_insee", all = TRUE), liste_dataframes)
@@ -1014,113 +1099,24 @@ print(df_final)
 
 ```
 
-## I.4. Gestion des valeurs manquantes
-
-Nous allons d'abord séparer la variable à expliquer et la variable explicative de notre jeu de données
-
-```{r}
-prog380 <- df_final[,1] # variable à expliquer
-don <- df_final[,2:17] # variable explicative
-```
-
-```{r}
-don$climat <- as.numeric(don$climat)
-don$gridens7 <- as.numeric(don$gridens7)
-don$beneficiaire_prog_zonages <- as.numeric(don$beneficiaire_prog_zonages)
-```
-
-
-### I.4.1. Visualisation
-
-Premièrement, nous allons visualiser les données manquantes pour essayer de savoir s'il y a une structure. Pour cela, nous allons construire un graphique qui présente la répartition des valeurs manquantes pour chaque variable de nos données
-
-```{r}
-aggr(don,only.miss=TRUE,sortVar=TRUE)
-```
-La variable climat présente un grand nombre de valeurs manquantes par rapport aux autres variables
-
-Résumé des combinaisons de données manquantes :
-
-```{r}
-res <- summary(aggr(don,prop=TRUE,combined=TRUE))$combinations
-res[rev(order(res[,2])),]
-```
-
-Aide :
-Cette séquence de commandes génère un résumé des combinaisons de données manquantes dans l'ensemble de données don. Elle calcule d'abord le résumé en utilisant aggr() avec les options prop=TRUE (pour afficher les pourcentages) et combined=TRUE (pour combiner les résultats pour toutes les variables). Ensuite, elle trie les résultats en fonction du pourcentage de données manquantes dans l'ordre décroissant.
-
-
-```{r}
-# A revoir : pas très bien compris
-matrixplot(don)
-marginplot(don[,c("climat","CSP_maire")])
-```
-Création d'un ensemble de données catégorielles avec des indicateurs 'o' pour observé et 'm' pour manquant :
-
-```{r}
-mis.ind <- matrix("o", nrow=nrow(don), ncol=ncol(don))
-mis.ind[is.na(don)] <- "m"
-dimnames(mis.ind) <- dimnames(don)
-```
-
-Analyse de correspondance multiple (MCA) sur l'ensemble de données mis.ind pour visualiser l'association entre les variables catégorielles 'o' et 'm'.
-
-```{r}
-options(ggrepel.max.overlaps = Inf)
-resMCA <- MCA(mis.ind)
-plot(resMCA, invis="ind", title="Analyse de correspondance multiple pour visualiser l'association entre les variables catégorielle", max.overlaps = 9500)
-```
-
-
-### I.4.2. Gestion des valeurs manquantes
-
-
-```{r}
-# Imputation avec amelia
-res.amelia <- amelia(don,m=100,p2s=0)
-```
-
-```{r}
-# Imputation avec mice
-res.mice <- mice(don,m=100,defaultMethod="norm", printFlag=F) # here the variability of the regression parameters is obtained by bootstrap
-```
-
-```{r}
-# Imputation avec missMDA
-res.MIPCA <- MIPCA(don,ncp=2)
-```
-
-
-
-```{r}
-## Checking and visualization of the imputations 
-plot(res.amelia)
-par(mfrow=c(1,1))
-compare.density(res.amelia, var="T12")
-overimpute(res.amelia, var="maxO3")
-# visualization with PCA 
-plot(res.MIPCA,choice= "ind.supp"); plot(res.MIPCA,choice="var")
-```
-
-```{r}
-## Pooling the results 
-lm.mice.out <- with(res.mice, lm(maxO3 ~ T9+T12+T15+Ne9+Ne12+Ne15+Vx9+Vx12+Vx15+maxO3v))
-pool.mice <- pool(lm.mice.out)
-resultmice <- summary(pool.mice)
-
-require(mice)
-imp<-prelim(res.mi=res.MIPCA,X=ozone[,1:11])
-fit <- with(data=imp,exp=lm(maxO3~T9+T12+T15+Ne9+Ne12+Ne15+Vx9+Vx12+Vx15+maxO3v))
-res.pool<-pool(fit)
-summary(res.pool)
-```
-
-
-
 # II. Visualisation des données
 
 
- ```{r}
+```{r}
+ggplot(df_final)+
+  aes(x = ecoquartiers)+
+  geom_bar()
+```
+
+```{r}
+
+```
+
+
+
+## II.2. Corrélations ? 
+
+```{r}
 # ggplot(superficie)+
 #   aes(x = 1:34945, y = superf_choro)+
 #   geom_point()
@@ -1129,6 +1125,15 @@ summary(res.pool)
 
 
 # III. Modélisation statistique
+
+Nous allons d'abord séparer la variable à expliquer et la variable explicative de notre jeu de données
+
+```{r}
+prog380 <- df_final[,1] # variable à expliquer
+don <- df_final[,2:19] # variable explicative
+```
+
+## III.1. Gestion des données déséquilibrées
 
 
 
