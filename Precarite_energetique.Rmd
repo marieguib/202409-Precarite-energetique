@@ -29,11 +29,11 @@ Tout d'abord, nous allons nous focaliser sur la région Bretagne dans un premier
 
 ## I.1. Variable à expliquer
 
-On importe d'abord les données CHORUS concernant le programme 380 (fonds vert) pour récupérer les informations nécessaires à notre étude. 
+On importe d'abord les données CHORUS concernant le programme 380 (fonds vert) au niveau communal pour récupérer les informations nécessaires à notre étude. 
 
 ```{r message = FALSE}
 BUCKET <- "marieguibert2"
-FILE_KEY_S3 <- "Sujet_master/Data/Y/sqllab_untitled_query_1_20240405T134355.csv"
+FILE_KEY_S3 <- "Sujet_master/Data/Y/prog380_communes.csv"
 
 ae_fonds_vert <- 
   aws.s3::s3read_using(
@@ -52,26 +52,26 @@ head(ae_fonds_vert)
 dim(ae_fonds_vert)
 ```
 
-Nous avons 232 bénéficiaires et 68 colonnes. Pour continuer notre analyse nous allons sélectionner les données au niveau communal 
-
-
-```{r}
-# Vérification que tous les SIRET fassent bien 14 caractères
-table(str_length(ae_fonds_vert$beneficiaire_code))
-```
+Nous avons 232 bénéficiaires de ce programme et 68 colonnes. 
+Nous allons vérifier que nos données ne contiennent bien que des communes :
 
 ```{r include=FALSE}
 # Vérification qu'on ait que des communes
 table(ae_fonds_vert$denomination)
 ```
 
-
 ```{r}
 # Vérification que toutes les données soient sur 2023
 table(ae_fonds_vert$annee)
 ```
 
-Ce tableau nous montre que le programme du fonds vert ne contient des données seulement pour l'année 2023. Nous allons nous intéresser au code INSEE de la commune du SIRET et le montant du financement. 
+Ce tableau nous montre que le programme du fonds vert ne contient des données seulement pour l'année 2023. 
+
+### Montant des AE
+
+Nous allons nous intéresser au code INSEE de la commune du SIRET et le montant du financement. 
+
+*Ici, le "code_commune" correspond à la commune du SIRET (jointure réalisée précédemment dans SQL Lab)*
 
 ```{r}
 ae_fonds_vert_montant <- ae_fonds_vert %>% 
@@ -82,11 +82,9 @@ ae_fonds_vert_montant <- ae_fonds_vert %>%
 head(ae_fonds_vert_montant)
 ```
 
-```{r}
-dim(ae_fonds_vert_montant)
-```
+### Nombre de demandes de financements
 
-Nous allons grouper par commune du SIRET pour avoir une approche communale et pour savoir le nombre de projets par commune.
+Nous allons grouper par **commune du SIRET** pour avoir une approche communale et pour savoir le nombre de projets par commune.
 
 ```{r}
 ae_fonds_vert_nb <- ae_fonds_vert %>%
@@ -99,27 +97,33 @@ head(ae_fonds_vert_nb)
 table(ae_fonds_vert_nb$nb_projets)
 ```
 
-Puisque nous avons une grande majorité de communes demandant un seul financement, nous allons passer notre variable en binaire : "a demandé un financement / n'a pas demandé de financement"
+Puisque nous avons une grande majorité de communes demandant un seul financement, nous allons passer notre variable en binaire : "a demandé un financement / n'a pas demandé de financement".
 - Valeur 1 : a demandé un financement
 - Valeur 0 : n'a pas demandé de financement
+
+Cette manipulation va nous simplifier le travail
 
 ```{r}
 ae_fonds_vert_binaire <- ae_fonds_vert %>%
   select(code_commune) %>% 
   group_by(code_commune) %>%
-  summarize(beneficiaire = 1)
+  summarize(beneficiaire_prog380 = 1)
 
 
 # Conversion pour avoir les mêmes types que dans le fichier communes
 ae_fonds_vert_binaire$code_commune <- as.character(ae_fonds_vert_binaire$code_commune)
+
+head(ae_fonds_vert_binaire)
 ```
 
 Notre tableau final contient bien le code de la commune du SIRET et si la commune a demandé un financement (1)
 
+### Fichier des communes
+
 Pour pouvoir constituer notre variable à expliquer, il nous faut le reste des communes de Bretagne pour pouvoir savoir quelles communes n'ont pas fait de demande de financement
 
 ```{r}
-FILE_KEY_S3 <- "Sujet_master/Data/Y/commune2021.csv"
+FILE_KEY_S3 <- "Sujet_master/Data/Y/v_commune_2023.csv"
 
 communes <- 
   aws.s3::s3read_using(
@@ -146,12 +150,13 @@ On ajoute une colonne avec la valeur 0
 
 ```{r}
 communes <- communes %>% 
-  mutate(beneficiaire = 0) %>% 
+  mutate(beneficiaire_prog380 = 0) %>% 
   rename(code_commune = COM)
 ```
 
 Nous allons maintenant assembler les deux fichiers pour avoir notre variable à expliquer complète.
 
+### Constitution de la variable à expliquer (binaire)
 
 Règle : si un code INSEE d'une commune apparaît avec la valeur 0 ET la valeur 1 alors on garde seulement la ligne avec la valeur 1 => cela signifie qu'elle a fait une demande de financement
 
@@ -162,11 +167,10 @@ beneficiaires_fonds_vert <- merge(ae_fonds_vert_binaire, communes,
                                   all = TRUE, suffix = c("_ae", "_com"))
 
 # Remplacer les valeurs NA par 0
-beneficiaires_fonds_vert$beneficiaire <- ifelse(is.na(beneficiaires_fonds_vert$beneficiaire_ae), 0, 1)
+beneficiaires_fonds_vert$beneficiaire_prog380 <- ifelse(is.na(beneficiaires_fonds_vert$beneficiaire_prog380_ae), 0, 1)
 
 beneficiaires_fonds_vert <- beneficiaires_fonds_vert %>% 
-  select(code_commune, beneficiaire) %>% 
-  rename(beneficiaire_prog = beneficiaire)
+  select(code_commune, beneficiaire_prog380)
 
 head(beneficiaires_fonds_vert)
 ```
@@ -175,7 +179,7 @@ head(beneficiaires_fonds_vert)
 dim(beneficiaires_fonds_vert)
 ```
 
-Nous avons bien 1208 communes (nombre de communes en Bretagne)
+Nous avons bien 1207 communes (nombre de communes en Bretagne)
 
 ```{r}
 # Renommage de la colonne pour le code commune en code INSEE
@@ -183,22 +187,30 @@ beneficiaires_fonds_vert <- beneficiaires_fonds_vert %>%
   rename(code_insee = code_commune)
 ```
 
-
+### Distribution de notre variable à explqiuer
 
 Nous allons analyser la distribution des 1 et 0 dans notre variable à expliquer
 
 ```{r}
 ggplot(beneficiaires_fonds_vert)+
-  aes(x = beneficiaire_prog)+
+  aes(x = beneficiaire_prog380)+
   geom_bar(fill="lightblue")+
   ggtitle("Nombre de communes ayant demandé un financement pour le programme 380")
 ```
 ```{r}
-table(beneficiaires_fonds_vert$beneficiaire)
+table(beneficiaires_fonds_vert$beneficiaire_prog380)
 ```
 
 Nous avons donc des données déséquilibrées à traiter de ce cas là.
 
+
+```{r}
+# Suppression des variables inutiles
+rm(ae_fonds_vert)
+rm(ae_fonds_vert_binaire)
+rm(ae_fonds_vert_montant)
+rm(ae_fonds_vert_nb)
+```
 
 ## I.2. Variables explicatives
 
@@ -244,6 +256,12 @@ conso_agriculture <- conso_agriculture %>%
 head(conso_agriculture)
 ```
 
+On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
+
+```{r}
+conso_agriculture <- merge(communes, conso_agriculture, by.x = "code_commune", by.y = "code_insee")
+```
+
 ```{r}
 conso_industrie <- conso_elec_gaz %>% 
   select(Année,`Code.Commune`, `Consommation.Industrie..MWh.`) %>% 
@@ -252,7 +270,12 @@ conso_industrie <- conso_elec_gaz %>%
 
 conso_industrie <- conso_industrie %>% 
   rename(code_insee = Code.Commune)
+```
 
+On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
+
+```{r}
+conso_industrie <- merge(communes, conso_industrie, by.x = "code_commune", by.y = "code_insee")
 ```
 
 ```{r}
@@ -265,6 +288,12 @@ conso_tertiaire <- conso_tertiaire %>%
   rename(code_insee = Code.Commune)
 ```
 
+On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
+
+```{r}
+conso_tertiaire <- merge(communes, conso_tertiaire, by.x = "code_commune", by.y = "code_insee")
+```
+
 ```{r}
 conso_residentiel <- conso_elec_gaz %>% 
   select(Année,`Code.Commune`, `Consommation.Résidentiel...MWh.`)%>% 
@@ -273,6 +302,12 @@ conso_residentiel <- conso_elec_gaz %>%
 
 conso_residentiel <- conso_residentiel %>% 
   rename(code_insee = Code.Commune)
+```
+
+On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
+
+```{r}
+conso_residentiel <- merge(communes, conso_residentiel, by.x = "code_commune", by.y = "code_insee")
 ```
 
 ```{r}
@@ -286,7 +321,13 @@ conso_totale <- conso_totale %>%
   rename(code_insee = Code.Commune)
 ```
 
-Nous avons bien le bon nombre de lignes pour chaque variable. Nous allons vérifier s'il y a des valeurs manquantes
+On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
+
+```{r}
+conso_totale <- merge(communes, conso_totale, by.x = "code_commune", by.y = "code_insee")
+```
+
+Nous allons vérifier s'il y a des valeurs manquantes
 
 ```{r}
 sum(is.na(conso_agriculture))
@@ -296,11 +337,20 @@ sum(is.na(conso_tertiaire))
 sum(is.na(conso_totale))
 ```
 
-Nous n'avons pas de données manquantes donc on peut continuer l'étude
+Nous n'avons pas de données manquantes
+
+
+```{r}
+# On supprime la variable qui ne nous sert pas 
+rm(conso_elec_gaz)
+```
+
 
 ### I.2.B. Logement
 
 Nous allons importer des données concernant la thématique du logement
+
+#### a) DPE
 
 Tout d'abord, nous allons nous focaliser sur le DPE des logements. Le Diagnostic de Performance Energétique (DPE) renseigne sur la performance énergétique et environnementale d’un logement ou d’un bâtiment, en évaluant sa consommation d’énergie et son impact en matière d’émissions de gaz à effet de serre.
 
@@ -309,14 +359,14 @@ Tout d'abord, nous allons nous focaliser sur le DPE des logements. Le Diagnostic
 
 ```
 
-
+#### b) Friches
 
 Nous allons maintenant nous intéresser à la base de données "cartofriches". Elle permet de référencer des sites potentiellement en friche. Le terme de « friches » est pris ici dans le sens d’espaces artificialisés et inoccupés.
 
 ```{r}
 FILE_KEY_S3 <- "Sujet_master/Data/X/Logement/friches-standard.csv"
 
-fichier_friches <- 
+friches <- 
   aws.s3::s3read_using(
     FUN = readr::read_delim,
     object = FILE_KEY_S3,
@@ -324,18 +374,18 @@ fichier_friches <-
     opts = list("region" = "")
   )
 
-possede_friches <- fichier_friches %>% 
+friches <- friches %>% 
   select(comm_insee) %>% 
   group_by(comm_insee) %>% 
   summarize(nb_friches = n())
   
   
-head(possede_friches)
+head(friches)
 ```
 Pour avoir le reste des communes de la France, nous allons ajouter des 0 sur les lignes où on a pas de valeur
 
 ```{r}
-friches <- merge(possede_friches, communes, 
+friches <- merge(friches, communes, 
                                   by.x = "comm_insee", by.y = "code_commune",
                                   all = TRUE, suffix = c("_friche", "_com"))
 
@@ -358,7 +408,7 @@ friches <- friches %>%
   rename(code_insee = comm_insee)
 ```
 
-
+#### c) Ecoquartiers
 
 La démarche ÉcoQuartier, portée par le Ministère de la Transition écologique et de la Cohésion des Territoires, favorise de nouvelles façons de concevoir, construire et gérer la ville durablement. 
 Cette variable m'a donc paru importante à inclure dans le programme du fonds vert. 
@@ -393,7 +443,7 @@ Nous allons ajouter les communes ne présentant pas d'écoquartiers
 ```{r}
 communes_eco_quartiers <- merge(eco_quartiers, communes, 
                                   by.x = "Code INSEE", by.y = "code_commune", 
-                                  all = TRUE, suffix = c("_ecoquartiers", "_com"))
+                                  all.y = TRUE, suffix = c("_ecoquartiers", "_com"))
 
 # Remplacer les valeurs NA par 0
 communes_eco_quartiers$beneficiaire <- ifelse(is.na(communes_eco_quartiers$ecoquartiers), 0, 1)
@@ -404,6 +454,7 @@ communes_eco_quartiers <- communes_eco_quartiers %>%
 
 head(communes_eco_quartiers)
 ```
+
 On ne conserve que les communes de Bretagne
 
 ```{r}
@@ -422,8 +473,15 @@ communes_eco_quartiers <- communes_eco_quartiers %>%
   rename(code_insee = `Code INSEE`)
 ```
 
+```{r}
+# Suppression variables inutiles
+rm(eco_quartiers)
+```
 
 ### I.2.C. Urbanisme
+
+
+#### a) Programmes
 
 Nous allons importer le fichier qui recense les villages d'avenir (communes qui sont bénéficiaires d'un programme : PVD, ACV, ...)
 
@@ -461,29 +519,12 @@ zonages_prog <- zonages_prog %>%
   filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
 ```
 
-On ajoute la commune manquante au document
-
-```{r}
-zonages_prog <- merge(zonages_prog, communes, 
-                                  by.x = "codgeo",  by.y = "code_commune", 
-                                  all = TRUE, suffix = c("_zonages", "_com"))
-
-# Mettre NA pour les valeurs non renseignées
-zonages_prog$beneficiaire_prog_zonages <- ifelse(is.na(zonages_prog$beneficiaire_prog), NA, zonages_prog$beneficiaire_prog)
-
-zonages_prog <- zonages_prog %>% 
-  select(codgeo, beneficiaire_prog_zonages)
-
-zonages_prog$beneficiaire_prog_zonages <- factor(zonages_prog$beneficiaire_prog_zonages)
-
-head(zonages_prog)
-```
-
 ```{r}
 zonages_prog <- zonages_prog %>% 
   rename(code_insee = codgeo)
 ```
 
+#### b) CRTE
 
 On importe ensuite les données concernant les communes couvertes par les CRTE 
 
@@ -519,7 +560,7 @@ liste_crte <- liste_crte %>%
   filter(substr(insee_com, 1, 2) %in% c("22", "29", "35", "56")) 
 ```
 
-Nous avons deux communes manquantes que nous allons ajouter
+Nous avons une commune manquante que nous allons ajouter
 
 ```{r}
 communes_crte <- merge(liste_crte, communes, 
@@ -540,6 +581,13 @@ communes_crte <- communes_crte %>%
   rename(code_insee = insee_com)
 ```
 
+```{r}
+# Suppression variables inutiles
+rm(liste_crte)
+```
+
+
+#### c) Loi littoral (climat)
 
 Nous allons à présent importer les données pour savoir si la commune est concernée par la loi littoral (COG de 2022)
 
@@ -576,15 +624,11 @@ table(loi_littoral$CLASSEMENT)
 
 ```{r}
 loi_littoral <- loi_littoral %>% 
-  mutate(CLASSEMENT = gsub("Estuaire", "0", CLASSEMENT)) %>%
-  mutate(CLASSEMENT = gsub("Lac", "1", CLASSEMENT)) %>% 
-  mutate(CLASSEMENT = gsub("Mer", "2", CLASSEMENT))
+  mutate(CLASSEMENT = gsub("Estuaire", 1, CLASSEMENT)) %>%
+  mutate(CLASSEMENT = gsub("Lac", 2, CLASSEMENT)) %>% 
+  mutate(CLASSEMENT = gsub("Mer", 3, CLASSEMENT))
 
 table(loi_littoral$CLASSEMENT)
-```
-
-```{r}
-head(loi_littoral)
 ```
 
 Nous allons conserver les communes de Bretagne
@@ -596,15 +640,15 @@ loi_littoral <- loi_littoral %>%
 dim(loi_littoral)
 ```
 
-On remarque que nous avons seulement 264 communes de Bretagne, nous allons donc devoir compléter par des valeurs manquantes
+On remarque que nous avons seulement 264 communes de Bretagne, nous allons donc devoir compléter cette variable.
 
 ```{r}
 loi_littoral <- merge(loi_littoral, communes, 
                                   by.x = "INSEE_COM", by.y = "code_commune", 
                                   all = TRUE, suffix = c("_littoral", "_com"))
 
-# Mettre NA pour les valeurs non renseignées
-loi_littoral$climat <- ifelse(is.na(loi_littoral$CLASSEMENT), NA, loi_littoral$CLASSEMENT)
+# Mettre 0 pour les valeurs non renseignées --> correspond à une commune non concernée par la loi littoral
+loi_littoral$climat <- ifelse(is.na(loi_littoral$CLASSEMENT), 0, loi_littoral$CLASSEMENT)
 
 loi_littoral <- loi_littoral %>% 
   select(INSEE_COM, climat) 
@@ -619,6 +663,7 @@ loi_littoral <- loi_littoral %>%
   rename(code_insee = INSEE_COM)
 ```
 
+#### d) Densité
 
 Nous allons ensuite importer les données qui décrivent la grille communale de densité en 7 niveaux : 
 - niveau 1 : Grands centres urbains
@@ -661,33 +706,13 @@ densite7 <- densite7 %>%
   filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
 ```
 
-Il nous manque une commune que nous allons ajouter
-
-```{r}
-densite7 <- merge(densite7, communes, 
-                                  by.x = "codgeo", by.y = "code_commune",
-                                  all = TRUE, suffix = c("_densite", "_com"))
-
-# On ne garde que les communes en Bretagne
-densite7 <- densite7 %>%
-  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
-
-# Mettre NA pour les valeurs non renseignées
-densite7$gridens7 <- ifelse(is.na(densite7$gridens7), NA, densite7$gridens7)
-
-densite7 <- densite7 %>% 
-  select(codgeo, gridens7)
-
-densite7$gridens7 <- factor(densite7$gridens7)
-
-head(densite7)
-```
-
 ```{r}
 densite7 <- densite7 %>% 
   rename(code_insee = codgeo)
 ```
 
+
+#### e) Superficie
 
 Nous allons ensuite importer les données concernant la superficie de chaque commune
 
@@ -725,26 +750,6 @@ superficie <- superficie %>%
   filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56"))
 ```
 
-Nous ajoutons la commune manquante
-
-```{r}
-superficie <- merge(superficie, communes, 
-                                  by.x = "codgeo", by.y = "code_commune",
-                                  all = TRUE, suffix = c("_superficie", "_com"))
-
-# On ne garde que les communes en Bretagne
-superficie <- superficie %>%
-  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
-
-# Si la superficie est NA alors on remplace par NA
-superficie$superf_choro <- ifelse(is.na(superficie$superf_choro), NA, superficie$superf_choro)
-
-superficie <- superficie %>% 
-  select(codgeo, superf_choro)
-
-head(superficie)
-```
-
 ```{r}
 superficie <- superficie %>% 
   rename(code_insee = codgeo)
@@ -753,6 +758,8 @@ superficie <- superficie %>%
 ### I.2.D. Transport
 
 Nous allons maintenant importer des données concernant la thématique du transport.
+
+#### a) Gares
 
 ```{r}
 FILE_KEY_S3 <- "Sujet_master/Data/X/Transport/arret_ferroviaire.csv"
@@ -828,6 +835,7 @@ head(gares)
 
 ### I.2.E. Population / Economie / Emploi
 
+#### a) Revenu disponible
 
 ```{r}
 FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/mediane_revenu_dispo.xlsx"
@@ -858,32 +866,12 @@ revenu_dispo <- revenu_dispo %>%
   filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
 ```
 
-Il nous manque une commune donc on fait une jointure avec le fichier des communes pour la récupérer
-
-```{r}
-revenu_dispo <- merge(revenu_dispo, communes,
-               by.x = "codgeo",  by.y = "code_commune",
-               all = TRUE, suffix = c("_revenu_dispo", "_com"))
-
-# Mettre NA pour les valeurs non renseignées
-revenu_dispo$med_revenu_dispo <- ifelse(is.na(revenu_dispo$med_disp), NA, revenu_dispo$med_disp)
-
-
-# On ne conserve que les communes de Bretagne
-revenu_dispo <- revenu_dispo %>%
-  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
-
- revenu_dispo <- revenu_dispo %>% 
-  select(codgeo, med_revenu_dispo)
-
-head(revenu_dispo)
-```
-
 ```{r}
 revenu_dispo <- revenu_dispo %>% 
   rename(code_insee = codgeo)
 ```
 
+#### b) Population
 
 Nous allons maintenant importer les données de population
 
@@ -902,7 +890,6 @@ pop <-
 head(pop)
 ```
 
-
 ```{r}
 pop <- pop %>% 
   filter(an == 2020) %>% 
@@ -918,31 +905,12 @@ pop <- pop %>%
   filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
 ```
 
-Il nous manque une commune que nous allons ajouter
-
-```{r}
-pop <- merge(pop, communes,
-               by.x = "codgeo",  by.y = "code_commune",
-               all = TRUE, suffix = c("_revenu_dispo", "_com"))
-
-# Remplacer les valeurs NA par 0
-pop$pop_commune <- ifelse(is.na(pop$p_pop), NA, pop$p_pop)
-
-# On ne conserve que les communes de Bretagne
-pop <- pop %>%
-  filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
-
- pop <- pop %>% 
-  select(codgeo, p_pop)
-
-head(pop)
-```
-
 ```{r}
 pop <- pop %>% 
   rename(code_insee = codgeo)
 ```
 
+#### c) CSP du Maire
 
 Nous allons maintenant importer des données un peu plus sensibles : les maires en 2023
 
@@ -985,7 +953,7 @@ elus <- merge(elus, communes,
                by.x = "code_insee",  by.y = "code_commune",
                all = TRUE, suffix = c("_elus", "_com"))
 
-# Mettre 0 pour les valeurs non renseignées
+# Mettre NA pour les valeurs non renseignées
 elus$CSP_maire <- ifelse(is.na(elus$CSP_maire), NA, elus$CSP_maire)
 
 # On ne conserve que les communes de Bretagne
@@ -999,7 +967,35 @@ head(elus)
 ```
 
 
+#### d) Taux d'endettement 
 
+Nous allons maintenant importer les données au sujet du taux d'endettement des communes
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/taux_endettement2022.csv"
+
+taux_endettement <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,sep = ";",
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+
+head(taux_endettement)
+```
+On ne garde que les colonnes qui nous intéresse et seulement pour la région Bretagne
+
+```{r}
+taux_endettement <- taux_endettement %>%
+  select(1,4) %>% 
+  rename("code_insee" = "codgeo") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+head(taux_endettement)
+```
+
+#### e) 
 
 ## I.3. Constitution de la base de données
 
