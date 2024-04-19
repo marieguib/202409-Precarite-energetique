@@ -1134,40 +1134,6 @@ ggplot(df_final, aes(x = ecoquartiers)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-```{r}
-library(leaflet)
-library(tidygeocoder)
-
-# Calcul de la latitude et longitude
-df_carto_pop <- df_final %>% 
-  select(code_insee, p_pop)
-  
-adresses <- df_carto_pop %>% 
-  mutate(Pays = "France")
-
-adresses <- tibble(adresses)
-
-coordonnees_communes <- adresses %>% 
-  geocode(postalcode = code_insee, 
-          country = Pays,
-          method = "osm", 
-          progress_bar = T)
-
-############## A FAIRE 
-
-# Création de la carte
-map <- leaflet(data = df_final) %>%
-  addTiles() %>%
-  addMarkers(
-    ~code_insee,
-    popup = ~paste("Code INSEE:", code_insee, "<br>",
-                   "Population:", population)
-  ) %>%
-  setView(lng = 2.35, lat = 48.85, zoom = 5)  # Position et zoom initial de la carte
-
-# Affichage de la carte
-map
-```
 
 
 
