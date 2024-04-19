@@ -16,11 +16,6 @@ library(aws.s3)
 library(dplyr)
 library(stringr)
 library(ggplot2)
-library(VIM) # valeurs manquantes
-library(FactoMineR)
-library(Amelia) # analyse factorielle
-library(mice)
-library(missMDA)
 ```
 
 # I. Importations et traitements des données
@@ -652,22 +647,21 @@ On transforme ensuite la variable CLASSEMENT en une variable à 3 modalités
 table(loi_littoral$CLASSEMENT)
 ```
 
-```{r}
-loi_littoral <- loi_littoral %>% 
-  mutate(CLASSEMENT = gsub("Estuaire", 1, CLASSEMENT)) %>%
-  mutate(CLASSEMENT = gsub("Lac", 2, CLASSEMENT)) %>% 
-  mutate(CLASSEMENT = gsub("Mer", 3, CLASSEMENT))
-
-table(loi_littoral$CLASSEMENT)
-```
-
 Nous allons conserver les communes de Bretagne
 
 ```{r}
 loi_littoral <- loi_littoral %>% 
   filter(substr(INSEE_COM, 1, 2) %in% c("22", "29", "35", "56")) 
 
-dim(loi_littoral)
+table(loi_littoral$CLASSEMENT)
+```
+
+```{r}
+loi_littoral <- loi_littoral %>% 
+  mutate(CLASSEMENT = gsub("Estuaire", 1, CLASSEMENT)) %>%
+  mutate(CLASSEMENT = gsub("Mer", 2, CLASSEMENT)) 
+
+table(loi_littoral$CLASSEMENT)
 ```
 
 On remarque que nous avons seulement 264 communes de Bretagne, nous allons donc devoir compléter cette variable.
@@ -1122,7 +1116,11 @@ df_final$nb_actifs <- as.numeric(df_final$nb_actifs)
 summary(df_final)
 ```
 
-# II. Visualisation des données
+# II. Visualisation des données 
+
+## II.1. Analyse univariée
+
+### II.1.A. Variables qualitatives
 
 ```{r}
 ggplot(df_final, aes(x = ecoquartiers)) +
@@ -1133,21 +1131,124 @@ ggplot(df_final, aes(x = ecoquartiers)) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
 ```
-
-
-
-
-## II.2. Corrélations ? 
-
 ```{r}
-# ggplot(superficie)+
-#   aes(x = 1:34945, y = superf_choro)+
-#   geom_point()
+ggplot(df_final, aes(x = "", fill = beneficiaire_prog)) +
+  geom_bar(width = 1, stat = "count") +
+  coord_polar("y", start = 0) +
+  labs(title = "Communes de Bretagne bénéficiaires d'un programme (ACV, PVD...)",
+       fill = "Bénéficiaire",
+       x = NULL,
+       y = NULL) +
+  theme_void() +
+  theme(plot.title = element_text(hjust = 0.5))+
+  scale_fill_brewer(palette = 8)
+```
+```{r}
+ggplot(df_final)+
+  aes(x=gridens7)+
+  geom_bar(aes(fill=gridens7))+
+  labs(title = "Densité des communes de Bretagne",
+       fill = "Grille de densité \nen 7 niveaux",
+       x = "Densité",
+       y = "Nombre de communes")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  scale_fill_brewer()
 ```
 
 
 
-# III. Modélisation statistique
+```{r}
+ggplot(df_final, aes(x = "", fill = climat)) +
+  geom_bar(width = 1, stat = "count") +
+  coord_polar("y", start = 0) +
+  labs(title = "Climat des communes en Bretagne",
+       fill = "Climat",
+       x = NULL,
+       y = NULL) +
+  theme_void() +
+  scale_color_manual(values=c("skyblue","red","darkgreen"))+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+ggplot(df_final, aes(x = "", fill = gare_tgv)) +
+  geom_bar(width = 1, stat = "count") +
+  coord_polar("y", start = 0) +
+  labs(title = "Communes de Bretagne avec une gare TGV",
+       fill = "Gare TGV",
+       x = NULL,
+       y = NULL) +
+  theme_void() +
+  theme(plot.title = element_text(hjust = 0.5))+
+  scale_fill_brewer(palette = 4)
+```
+
+
+### II.1.B. Variables quantitatives
+
+```{r}
+ggplot(df_final, aes(x = p_pop)) +
+  geom_histogram(binwidth = 5000, fill = "darkred") +
+  labs(title = "Distribution de la population des communes de Bretagne",
+       x = "Population",
+       y = "Nombre de communes") +
+  theme_minimal()+
+  coord_cartesian(xlim = c(0, 50000))+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r}
+ggplot(df_final, aes(y = moyenne_conso_totale)) +
+  geom_boxplot(fill = "cadetblue4") +
+  labs(title = "Moyenne de consommation totale d'électricité \net de gaz des communes de Bretagne (en MwH)",
+       y = "Consommation") +
+  theme_minimal()+
+  coord_cartesian(ylim = c(0, 40000))+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r}
+# Charger les librairies ggplot2 et patchwork
+library(ggplot2)
+library(patchwork)
+
+# Premier graphique : distribution de la population des communes
+graphique_population <- ggplot(df_final, aes(x = nb_inactifs)) +
+  geom_histogram(binwidth = 250, fill = "orchid") +
+  labs(title = "Distribution de la population inactive des communes de Bretagne",
+       x = "Inactifs",
+       y = "Nombre de communes") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(0, 3000)) +  # Limiter l'axe x à 20 000
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Deuxième graphique : distribution des actifs des communes
+graphique_actifs <- ggplot(df_final, aes(x = nb_actifs)) +
+  geom_histogram(binwidth = 250, fill = "darkmagenta") +
+  labs(title = "Distribution de la poplation active des communes de Bretagne",
+       x = "Actifs",
+       y = "Nombre de communes") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(0, 5000)) +  # Limiter l'axe x à 20 000
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Superposer les deux graphiques
+graphique_combine <- graphique_population + graphique_actifs + plot_layout(ncol = 1)
+
+# Afficher le graphique combiné
+print(graphique_combine)
+```
+
+
+# III. Analyse de corrélation
+
+```{r}
+
+```
+
+
+
+# IV. Modélisation statistique
 
 Nous allons d'abord séparer la variable à expliquer et la variable explicative de notre jeu de données
 
@@ -1156,16 +1257,15 @@ prog380 <- df_final[,1] # variable à expliquer
 don <- df_final[,2:19] # variable explicative
 ```
 
-## III.1. Gestion des données déséquilibrées
 
 
 
 
 
 
-## III.1. Apprentissage supervisé
+## IV.1. Apprentissage supervisé
 
-## III.2.Apprentissage non-supervisé
+## IV.2.Apprentissage non-supervisé
 
 
-# IV. Résultats
+# V. Résultats
