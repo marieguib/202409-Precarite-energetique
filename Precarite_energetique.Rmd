@@ -1096,20 +1096,77 @@ df_final <- Reduce(function(x, y) merge(x, y, by = "code_insee", all = TRUE), li
 
 # Affichage du dataframe final
 print(df_final)
+```
 
+```{r}
+summary(df_final)
+```
+
+On transforme les variables pour les avoir dans le bon format
+
+```{r}
+# Transformation en variable catégorielle (facteur)
+df_final$ecoquartiers <- as.factor(df_final$ecoquartiers)
+df_final$beneficiaire_prog <- as.factor(df_final$beneficiaire_prog)
+df_final$couverte_crte <- as.factor(df_final$couverte_crte)
+df_final$gridens7 <- as.factor(df_final$gridens7)
+df_final$gare_tgv <- as.factor(df_final$gare_tgv)
+df_final$CSP_maire <- as.factor(df_final$CSP_maire)
+
+# Transformation en variable numérique
+df_final$nb_inactifs <- as.numeric(df_final$nb_inactifs)
+df_final$nb_actifs <- as.numeric(df_final$nb_actifs)
+```
+
+```{r}
+summary(df_final)
 ```
 
 # II. Visualisation des données
 
-
 ```{r}
-ggplot(df_final)+
-  aes(x = ecoquartiers)+
-  geom_bar()
+ggplot(df_final, aes(x = ecoquartiers)) +
+  geom_bar(fill = "lightgreen") +
+  xlab("Communes avec au moins un éco-quartier") +
+  ylab("Nombre de communes") +
+  ggtitle("Répartition des communes avec au moins un éco-quartier") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ```{r}
+library(leaflet)
+library(tidygeocoder)
 
+# Calcul de la latitude et longitude
+df_carto_pop <- df_final %>% 
+  select(code_insee, p_pop)
+  
+adresses <- df_carto_pop %>% 
+  mutate(Pays = "France")
+
+adresses <- tibble(adresses)
+
+coordonnees_communes <- adresses %>% 
+  geocode(postalcode = code_insee, 
+          country = Pays,
+          method = "osm", 
+          progress_bar = T)
+
+############## A FAIRE 
+
+# Création de la carte
+map <- leaflet(data = df_final) %>%
+  addTiles() %>%
+  addMarkers(
+    ~code_insee,
+    popup = ~paste("Code INSEE:", code_insee, "<br>",
+                   "Population:", population)
+  ) %>%
+  setView(lng = 2.35, lat = 48.85, zoom = 5)  # Position et zoom initial de la carte
+
+# Affichage de la carte
+map
 ```
 
 
