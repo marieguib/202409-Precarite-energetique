@@ -214,6 +214,8 @@ Nous allons à présent passer à l'importation des différentes variables expli
 
 ### I.2.A. Energie
 
+#### a) Consommation électricité / gaz
+
 Nous allons importer les données de consommation annuelle d'électricité et de gaz
 
 ```{r}
@@ -370,6 +372,32 @@ Nous n'avons pas de données manquantes
 rm(conso_elec_gaz)
 ```
 
+#### b) Emissions GES
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Energie/emissions_ges.csv"
+
+emissions_ges <- 
+  aws.s3::s3read_using(
+    FUN = read.csv, 
+    sep = ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+```
+
+```{r}
+emissions_ges <- emissions_ges %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "emissions_ges" = "Emissions.de.gaz.à.effet.de.serre.hors.puits..PRG...par.secteur.2021") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+head(emissions_ges)
+```
+
 
 ### I.2.B. Logement
 
@@ -502,6 +530,33 @@ communes_eco_quartiers <- communes_eco_quartiers %>%
 # Suppression variables inutiles
 rm(eco_quartiers)
 ```
+
+#### d) Résidences secondaires
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Logement/nb_residences_secondaires.csv"
+
+nb_res_secondaires <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    sep= ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+```
+
+```{r}
+nb_res_secondaires <- nb_res_secondaires %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "nb_residences_secondaires" = "Nombre.de.résidences.secondaires.2020") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+head(nb_res_secondaires)
+```
+
 
 ### I.2.C. Urbanisme
 
@@ -856,6 +911,35 @@ gares <- gares %>%
 head(gares)
 ```
 
+#### b) Déplacements domicile-travail
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Transport/part_deplacement_dom_travail.csv"
+
+part_deplacement_dom_travail <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    sep= ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+```
+
+
+```{r}
+part_deplacement_dom_travail <- part_deplacement_dom_travail %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "part_trajets_voiture" = "Part.des.déplacements.domicile.travail.en.voiture.2020") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+part_deplacement_dom_travail$part_trajets_voiture <- as.numeric(part_deplacement_dom_travail$part_trajets_voiture)
+
+head(part_deplacement_dom_travail)
+```
+
 
 ### I.2.E. Population / Economie / Emploi
 
@@ -1019,6 +1103,14 @@ taux_endettement <- taux_endettement %>%
 head(taux_endettement)
 ```
 
+```{r}
+# Remplacement des valeurs -9999 par NA 
+taux_endettement <- taux_endettement %>% 
+  mutate(com_variation_encours_dette_ha_pct = ifelse(com_variation_encours_dette_ha_pct == -9999, NA, com_variation_encours_dette_ha_pct))
+```
+
+
+
 #### e) Inactifs
 
 Nous allons importer le fichier qui contient le nombre d'inacyifs de 15 à 64 ans en 2020 selon les communes.
@@ -1074,6 +1166,179 @@ nb_actifs <- nb_actifs %>%
   filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
 ```
 
+#### g) Dépendance économique
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/dependance_economique.csv"
+
+dependance_eco <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    sep= ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+```
+
+```{r}
+dependance_eco <- dependance_eco %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "dependance_eco" = "Indicateur.de.dépendance.économique.2020") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+
+dependance_eco$dependance_eco <- as.numeric(dependance_eco$dependance_eco)
+
+head(dependance_eco)
+```
+
+#### h) Taux d'abstention au premier tour des municipales
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/taux_abstention.csv"
+
+taux_abstention <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    sep= ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+```
+
+```{r}
+taux_abstention <- taux_abstention %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "abstention_municipales" = "Municipales...Taux.d.abstention.au.1er.tour.2020") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+
+taux_abstention$abstention_municipales <- as.numeric(taux_abstention$abstention_municipales)
+
+head(taux_abstention)
+```
+
+#### i) Taux de création d'entreprises
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/taux_creation_entreprises.csv"
+
+taux_creation_entreprises <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    sep= ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+```
+
+```{r warning = FALSE}
+taux_creation_entreprises <- taux_creation_entreprises %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "taux_creation_ent" = "Taux.de.création.d.entreprises.2021") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+
+taux_creation_entreprises$taux_creation_ent <- as.numeric(taux_creation_entreprises$taux_creation_ent)
+
+head(taux_creation_entreprises)
+```
+#### j) Nombre d'entreprises
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/nb_entreprises.csv"
+
+nb_entreprises <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    sep= ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+```
+
+```{r warning = FALSE}
+nb_entreprises <- nb_entreprises %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "total_entreprises" = "Nombre.d.entreprises.par.secteurs.d.activité.2021") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+
+nb_entreprises$total_entreprises <- as.numeric(nb_entreprises$total_entreprises)
+
+head(nb_entreprises)
+```
+
+### I.2.F. Social
+
+#### a) Licenciés sportifs
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Social/licencies_sportifs.csv"
+
+sportifs_licencies <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    sep= ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+```
+
+```{r warning = FALSE}
+sportifs_licencies <- sportifs_licencies %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "nb_licencies_sportifs" = "Nombre.de.licenciés.sportifs.2019") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+sportifs_licencies$nb_licencies_sportifs <- as.numeric(sportifs_licencies$nb_licencies_sportifs)
+
+head(sportifs_licencies)
+```
+
+
+#### b) 20-24 ans sans diplôme
+
+```{r}
+FILE_KEY_S3 <- "Sujet_master/Data/X/Social/20-24ans_sans_diplome.csv"
+
+jeunes_sans_diplome <- 
+  aws.s3::s3read_using(
+    FUN = read.csv,
+    sep= ";",
+    skip = 2,
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+```
+
+```{r}
+jeunes_sans_diplome <- jeunes_sans_diplome %>% 
+  select(1,3) %>% 
+  rename("code_insee" = "Code", 
+         "part_jeunes_sans_diplome" = "Part.des.20.24.ans.sans.diplôme.2020") %>% 
+  filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+jeunes_sans_diplome$part_jeunes_sans_diplome <- as.numeric(jeunes_sans_diplome$part_jeunes_sans_diplome)
+
+head(jeunes_sans_diplome)
+```
 
 
 ## I.3. Constitution de la base de données
@@ -1081,19 +1346,17 @@ nb_actifs <- nb_actifs %>%
 Nous allons maintenant constituer notre base de données pour pouvoir avoir toutes les informations dans un seul et même dataframe
 
 ```{r}
-liste_dataframes <- list(conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, 
-friches, communes_eco_quartiers, zonages_prog, communes_crte, loi_littoral, 
-densite7,  superficie, gares, revenu_dispo, pop, elus,taux_endettement, nb_inactifs, nb_actifs)
+liste_dataframes <- list(conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, emissions_ges,
+friches, communes_eco_quartiers, nb_res_secondaires, zonages_prog, communes_crte, loi_littoral, 
+densite7,  superficie, gares, part_deplacement_dom_travail, 
+revenu_dispo, pop, elus,taux_endettement, nb_inactifs, nb_actifs, dependance_eco, taux_abstention, taux_creation_entreprises, nb_entreprises,
+sportifs_licencies, jeunes_sans_diplome)
 
 
 df_final <- Reduce(function(x, y) merge(x, y, by = "code_insee", all = TRUE), liste_dataframes)
 
 # Affichage du dataframe final
 print(df_final)
-```
-
-```{r}
-summary(df_final)
 ```
 
 On transforme les variables pour les avoir dans le bon format
@@ -1115,6 +1378,11 @@ df_final$nb_actifs <- as.numeric(df_final$nb_actifs)
 ```{r}
 summary(df_final)
 ```
+
+```{r}
+rm(liste_dataframes)
+```
+
 
 # II. Visualisation des données 
 
@@ -1238,6 +1506,31 @@ graphique_combine <- graphique_population + graphique_actifs + plot_layout(ncol 
 # Afficher le graphique combiné
 print(graphique_combine)
 ```
+
+```{r}
+# Installer ggplot2 si ce n'est pas déjà fait
+# install.packages("ggplot2")
+
+# Charger la bibliothèque ggplot2
+library(ggplot2)
+
+# Supposons que votre dataframe s'appelle "df" et a les colonnes "Code_INSEE" et "Nombre_actifs"
+# Remplacez "df" par le nom réel de votre dataframe
+
+# Créer un graphique à barres
+ggplot(df_final, aes(x = code_insee, y = nb_actifs)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(title = "Nombre d'actifs par commune", x = "Code INSEE", y = "Nombre d'actifs") +
+  theme_minimal()
+```
+```{r}
+ggplot(df_final, aes(x = "", y = nb_actifs)) +
+  geom_boxplot(fill = "skyblue", color = "steelblue") +
+  labs(title = "Répartition du nombre d'actifs par commune", x = "", y = "Nombre d'actifs") +
+  coord_cartesian(ylim = c(0, 12000))+
+  theme_minimal()
+```
+
 
 
 # III. Analyse de corrélation
