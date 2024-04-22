@@ -16,6 +16,10 @@ library(aws.s3)
 library(dplyr)
 library(stringr)
 library(ggplot2)
+library(tidyr)
+library(tidyverse)
+
+library(corrplot)
 ```
 
 # I. Importations et traitements des données
@@ -553,6 +557,8 @@ nb_res_secondaires <- nb_res_secondaires %>%
   rename("code_insee" = "Code", 
          "nb_residences_secondaires" = "Nombre.de.résidences.secondaires.2020") %>% 
   filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+
+nb_res_secondaires$nb_residences_secondaires <- as.integer(nb_res_secondaires$nb_residences_secondaires)
 
 head(nb_res_secondaires)
 ```
@@ -1276,7 +1282,7 @@ nb_entreprises <- nb_entreprises %>%
   filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
 
 
-nb_entreprises$total_entreprises <- as.numeric(nb_entreprises$total_entreprises)
+nb_entreprises$total_entreprises <- as.integer(nb_entreprises$total_entreprises)
 
 head(nb_entreprises)
 ```
@@ -1306,7 +1312,7 @@ sportifs_licencies <- sportifs_licencies %>%
          "nb_licencies_sportifs" = "Nombre.de.licenciés.sportifs.2019") %>% 
   filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
 
-sportifs_licencies$nb_licencies_sportifs <- as.numeric(sportifs_licencies$nb_licencies_sportifs)
+sportifs_licencies$nb_licencies_sportifs <- as.integer(sportifs_licencies$nb_licencies_sportifs)
 
 head(sportifs_licencies)
 ```
@@ -1346,8 +1352,8 @@ head(jeunes_sans_diplome)
 Nous allons maintenant constituer notre base de données pour pouvoir avoir toutes les informations dans un seul et même dataframe
 
 ```{r}
-liste_dataframes <- list(conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, emissions_ges,
-friches, communes_eco_quartiers, nb_res_secondaires, zonages_prog, communes_crte, loi_littoral, 
+liste_dataframes <- list(beneficiaires_fonds_vert, conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, emissions_ges,
+friches, communes_eco_quartiers, nb_res_secondaires, zonages_prog, loi_littoral, 
 densite7,  superficie, gares, part_deplacement_dom_travail, 
 revenu_dispo, pop, elus,taux_endettement, nb_inactifs, nb_actifs, dependance_eco, taux_abstention, taux_creation_entreprises, nb_entreprises,
 sportifs_licencies, jeunes_sans_diplome)
@@ -1365,30 +1371,73 @@ On transforme les variables pour les avoir dans le bon format
 # Transformation en variable catégorielle (facteur)
 df_final$ecoquartiers <- as.factor(df_final$ecoquartiers)
 df_final$beneficiaire_prog <- as.factor(df_final$beneficiaire_prog)
-df_final$couverte_crte <- as.factor(df_final$couverte_crte)
 df_final$gridens7 <- as.factor(df_final$gridens7)
 df_final$gare_tgv <- as.factor(df_final$gare_tgv)
 df_final$CSP_maire <- as.factor(df_final$CSP_maire)
+df_final$beneficiaire_prog380 <- as.factor(df_final$beneficiaire_prog380) # variable à expliquer
+
 
 # Transformation en variable numérique
-df_final$nb_inactifs <- as.numeric(df_final$nb_inactifs)
-df_final$nb_actifs <- as.numeric(df_final$nb_actifs)
-```
-
-```{r}
-summary(df_final)
+df_final$nb_inactifs <- as.integer(df_final$nb_inactifs)
+df_final$nb_actifs <- as.integer(df_final$nb_actifs)
 ```
 
 ```{r}
 rm(liste_dataframes)
 ```
 
+On s'assure que nos données sous bien sous forme de dataframe
 
-# II. Visualisation des données 
+```{r}
+df_final <- as.data.frame(df_final)
+```
 
-## II.1. Analyse univariée
+On paramètre les codes insee comme des identifiants
 
-### II.1.A. Variables qualitatives
+```{r}
+df_final <- df_final %>% 
+  column_to_rownames(var="code_insee")
+```
+
+```{r}
+head(df_final)
+```
+
+## I.4. Gestion des valeurs manquantes
+
+Nous allons d'abord analyser si nous avons beaucoup de valeurs manquantes : 
+
+```{r}
+sum(is.na(df_final))
+```
+
+Nous allons afficher les lignes qui comportent des données manquantes : 
+
+```{r}
+which(is.na(df_final))
+```
+
+Supression des données manquantes
+
+```{r}
+df_final <- df_final %>% 
+  drop_na()
+```
+
+A revoir si je supprime vraiment 19 lignes.....
+
+# II. Statistiques descriptives
+
+## II.1.Statistiques classiques
+
+```{r}
+summary(df_final)
+str(df_final)
+```
+
+## II.2. Analyse univariée
+
+### II.2.A. Variables qualitatives
 
 ```{r}
 ggplot(df_final, aes(x = ecoquartiers)) +
@@ -1452,7 +1501,7 @@ ggplot(df_final, aes(x = "", fill = gare_tgv)) +
 ```
 
 
-### II.1.B. Variables quantitatives
+### II.2.B. Variables quantitatives
 
 ```{r}
 ggplot(df_final, aes(x = p_pop)) +
@@ -1508,22 +1557,6 @@ print(graphique_combine)
 ```
 
 ```{r}
-# Installer ggplot2 si ce n'est pas déjà fait
-# install.packages("ggplot2")
-
-# Charger la bibliothèque ggplot2
-library(ggplot2)
-
-# Supposons que votre dataframe s'appelle "df" et a les colonnes "Code_INSEE" et "Nombre_actifs"
-# Remplacez "df" par le nom réel de votre dataframe
-
-# Créer un graphique à barres
-ggplot(df_final, aes(x = code_insee, y = nb_actifs)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  labs(title = "Nombre d'actifs par commune", x = "Code INSEE", y = "Nombre d'actifs") +
-  theme_minimal()
-```
-```{r}
 ggplot(df_final, aes(x = "", y = nb_actifs)) +
   geom_boxplot(fill = "skyblue", color = "steelblue") +
   labs(title = "Répartition du nombre d'actifs par commune", x = "", y = "Nombre d'actifs") +
@@ -1532,33 +1565,34 @@ ggplot(df_final, aes(x = "", y = nb_actifs)) +
 ```
 
 
-
-# III. Analyse de corrélation
+# II.3. Analyse bivariée / multivariée
 
 ```{r}
+df_num <- df_final[sapply(df_final, is.numeric)]
+```
 
+```{r}
+matrixcorr <- cor(df_num)
+corrplot(matrixcorr)
+```
+
+# II. Constitution de la base de données finale
+
+```{r}
+df_final <- df_final %>% 
+  select(-c(moyenne_conso_agri, moyenne_conso_indus, moyenne_conso_tertiaire, moyenne_conso_residentiel)) 
+
+df_final <- df_final %>% 
+  select(-nb_inactifs)
+```
+
+```{r}
+df_num <- df_final[sapply(df_final, is.numeric)]
+```
+
+```{r}
+matrixcorr <- cor(df_num)
+corrplot(matrixcorr)
 ```
 
 
-
-# IV. Modélisation statistique
-
-Nous allons d'abord séparer la variable à expliquer et la variable explicative de notre jeu de données
-
-```{r}
-prog380 <- df_final[,1] # variable à expliquer
-don <- df_final[,2:19] # variable explicative
-```
-
-
-
-
-
-
-
-## IV.1. Apprentissage supervisé
-
-## IV.2.Apprentissage non-supervisé
-
-
-# V. Résultats

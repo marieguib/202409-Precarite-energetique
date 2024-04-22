@@ -1,0 +1,101 @@
+---
+title: "Quelles seront les sollicitations de subventions pour le fonds verts des communes en Bretagne ? Et pourquoi ?"
+author: "Marie Guibert"
+date: "2024-03-05"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+
+```{r}
+library(bestglm)
+```
+
+
+# III. Modélisation statistique
+
+```{r}
+df_final$beneficiaire_prog380 <- as.factor(df_final$beneficiaire_prog380) # Par sécurité
+```
+
+On positionne la variable à expliquer en dernier dans le dataframe : 
+
+```{r}
+df_final <- df_final %>% 
+  select(-beneficiaire_prog380, everything())
+```
+
+
+## III.1. Régression logistique
+
+### III.1.A. Création des jeux de données d'apprentissage/test
+
+Par sécurité, on effecture une permutation des données \
+On créé le jeu d'apprentissage et le jeu de données test
+
+```{r}
+set.seed(1234)
+perm <- sample(nrow(df_final))
+dapp <- df_final[perm[1:800], ]
+dtest <- df_final[-perm[1:800],]
+```
+
+
+### III.1.B. Construction du modèle
+
+Nous allons d'abord construire le modèle avec toutes les variables explicatives :
+
+```{r}
+modele_reg_log1 <- glm(beneficiaire_prog380 ~ ., data = dapp, family = binomial)
+summary(modele_reg_log1)
+```
+
+### III.1.C. Critères
+
+Recherche pour les critères AIC et BIC
+
+```{r}
+modele_glm_BIC <- bestglm(dapp,family = binomial, IC = "BIC")
+modele_glm_BIC$BestModel
+```
+
+```{r}
+modele_glm_AIC <- bestglm(dapp,family = binomial, IC = "AIC")
+modele_glm_AIC$BestModel
+```
+
+### III.1.D. Sélection de variables
+
+On retient le modèle qui minimise l'AIC :
+
+```{r}
+modele_glm0 <- glm(beneficiaire_prog380~1, data = dapp, family = binomial)
+step(object = modele_glm0, scope = formula(modele_reg_log1), direction = "forward")
+```
+
+On retient le modèle qui minimise le BIC:
+
+```{r}
+step(object = modele_glm0, scope = formula(modele_reg_log1), direction = "forward", k = log(nrow(df_final)))
+```
+
+Comparaison des deux modèles : 
+
+```{r}
+
+```
+
+#### III.1.E. Prévisions et erreurs
+
+- Tables de confusion 
+- Nombre de fois où la valeur prédite est différente de celle observée
+
+- Odds ratio
+
+## IV.1. Apprentissage supervisé
+
+## IV.2.Apprentissage non-supervisé
+
+
+# V. Résultats
