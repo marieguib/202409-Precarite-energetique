@@ -7,23 +7,44 @@ output:
     theme: leonids
     highlight: github
 ---
+# Environnement de travail
 
 ```{r}
+library(tidyverse)
 library(bestglm)
+library(rpart)
+library(rpart.plot)
 ```
 
+```{r}
+BUCKET <- "marieguibert2"
+FILE_KEY_S3 <- "Sujet_master/Data/BDD_finale/bdd_finale.csv"
+
+donnees <- 
+  aws.s3::s3read_using(
+    FUN = read.csv, 
+    row.names = "code_insee",
+    object = FILE_KEY_S3,
+    bucket = BUCKET,
+    opts = list("region" = "")
+  )
+```
 
 # III. Modélisation statistique
 
 ```{r}
-df_final$beneficiaire_prog380 <- as.factor(df_final$beneficiaire_prog380) # Par sécurité
+donnees$beneficiaire_prog380 <- as.factor(donnees$beneficiaire_prog380) # Par sécurité
 ```
 
 On positionne la variable à expliquer en dernier dans le dataframe : 
 
 ```{r}
-df_final <- df_final %>% 
+donnees <- donnees %>% 
   select(-beneficiaire_prog380, everything())
+```
+
+```{r}
+head(donnees)
 ```
 
 
@@ -36,9 +57,9 @@ On créé le jeu d'apprentissage et le jeu de données test
 
 ```{r}
 set.seed(1234)
-perm <- sample(nrow(df_final))
-dapp <- df_final[perm[1:800], ]
-dtest <- df_final[-perm[1:800],]
+perm <- sample(nrow(donnees))
+dapp <- donnees[perm[1:800], ]
+dtest <- donnees[-perm[1:800],]
 ```
 
 
@@ -47,11 +68,21 @@ dtest <- df_final[-perm[1:800],]
 Nous allons d'abord construire le modèle avec toutes les variables explicatives :
 
 ```{r}
-modele_reg_log1 <- glm(beneficiaire_prog380 ~ ., data = dapp, family = binomial)
+modele_reg_log1 <- glm(beneficiaire_prog380 ~ ., data = dapp, family = binomial) # modele logit
 summary(modele_reg_log1)
 ```
 
-### III.1.C. Critères
+
+### III.1.C. Sélection de variables
+
+Sélection backward
+
+```{r}
+step(object = modele_reg_log1, direction = "backward")
+```
+
+
+### III.1.D. Critères
 
 Recherche pour les critères AIC et BIC
 
@@ -77,7 +108,7 @@ step(object = modele_glm0, scope = formula(modele_reg_log1), direction = "forwar
 On retient le modèle qui minimise le BIC:
 
 ```{r}
-step(object = modele_glm0, scope = formula(modele_reg_log1), direction = "forward", k = log(nrow(df_final)))
+step(object = modele_glm0, scope = formula(modele_reg_log1), direction = "forward", k = log(nrow(donnees)))
 ```
 
 Comparaison des deux modèles : 
@@ -86,16 +117,135 @@ Comparaison des deux modèles :
 
 ```
 
-#### III.1.E. Prévisions et erreurs
+### III.1.E. Prévisions et erreurs
 
 - Tables de confusion 
 - Nombre de fois où la valeur prédite est différente de celle observée
 
 - Odds ratio
 
-## IV.1. Apprentissage supervisé
 
-## IV.2.Apprentissage non-supervisé
+## III.2. Arbres
+
+## III.2.A. Création et visualisation des arbres
+
+On explique la variable binaire "beneficiaire_prog380" avec le reste des variables du dataframe "donnees"
+
+```{r}
+tree <- rpart(beneficiaire_prog380~., data = donnees)
+#plot(tree)
+```
+
+Visualisation de l'arbre :
+
+```{r}
+prp(tree)
+rpart.plot(tree)
+```
+
+**Interprétation du noeud racine **:
+- Le 1er rectangle = noeud racine 
+- Dans le noeud racine : 100% des observations
+- On prédit le groupe 0 => Les 0 sont majoritaires 
+- 0.17 : score => rprévision de la probabilité => On a 17% de 1 (le score est plus précis que les groupes de prédictions : on peut poser un seuil)
+
+**Interprétation** :
+- Est-ce que la moyenne des consommations d'électricité/gaz est supérieure à ... 
 
 
+**Fonction d'impureté** : L’arbre construit est un arbre de classification. Le procédé de découpe des noeuds est différent : il utilise l’impureté de Gini (au lieu de la variance).
+
+
+*Remarque* : Cet arbre prédit bien des 0 ou des 1 donc on a bien un arbre de **classification binaire**
+
+
+On change de fonction d’impureté (information au lieu de Gini).
+
+```{r}
+tree1 <- rpart(beneficiaire_prog380~., data = donnees,parms=list(split="information"))
+tree1$parms
+```
+
+## II.2.B. Analyse des arbres
+
+```{r}
+printcp(tree)
+```
+On peut lire des informations sur la suite d’arbres emboîtés, cette suite est de longueur .. ici.
+
+*Remarque* : 
+- CP : le paramètre de complexité, plus il est petit plus l’arbre est profond ;
+- nsplit : nombre de coupures de l’arbre ;
+- rel error contient l’erreur calculée sur les données d’apprentissage. Cette erreur décroit lorsque la complexité augmente et peut être interprétée comme une erreur d’ajustement ;
+- xerror : contient l’erreur calculée par validation croisée. Elle peut être interprétée comme une erreur de prévision ;
+- xstd correspond à l’écart type estimé de l’erreur
+
+Ici, nous avons aux erreurs de classification
+De plus ces erreurs sont normalisées par rapport à l’erreur de l’arbre racine (sans coupure).
+
+```{r}
+donnees |> mutate(fitted=predict(tree,type="class")) |> 
+  summarise(MC=mean(fitted!=beneficiaire_prog380)/mean(beneficiaire_prog380==1))
+
+
+mean(predict(tree,type="class")!=donnees$beneficiaire_prog380)/mean(donnees$beneficiaire_prog380==1)
+```
+## II.2.C. Sélection de l'arbre optimal
+
+```{r}
+tree1 <- rpart(beneficiaire_prog380~.,data=donnees,cp=0.000001,minsplit=2)
+plotcp(tree1)
+```
+```{r}
+cp_opt <- tree1$cptable |> as.data.frame() |> 
+  slice(which.min(xerror)) |> 
+  dplyr::select(CP) |> as.numeric()
+tree_sel <- prune(tree1,cp=cp_opt)
+rpart.plot(tree_sel) 
+```
+
+On considère la suite d'arbres :
+
+```{r}
+tree2 <- rpart(beneficiaire_prog380~.,data=donnees,
+               parms=list(loss=matrix(c(0,5,1,0),ncol=2)),
+               cp=0.01,minsplit=2)
+```
+
+```{r}
+tree2$parms
+printcp(tree2)
+```
+
+Le critère est ici modifié, on utilise une erreur de classification pondérée pour choisir l’arbre.
+
+```{r}
+prev <- predict(tree2,type="class")
+conf <- table(donnees$beneficiaire_prog380,prev)
+conf
+```
+
+```{r}
+loss <- tree2$parms$loss
+(conf[1,2]*loss[1,2]+
+    conf[2,1]*loss[2,1])/nrow(donnees)/mean(donnees$beneficiaire_prog380==1)
+```
+
+### b) Comparaison 
+
+```{r}
+summary(predict(tree_sel,type="class"))
+summary(predict(tree2,type="class"))
+```
+
+Cette stratégie de changer la matrice de coût peut se révéler intéressante dans le cas de *données déséquilibrées*.
+En effet, pour de tels problèmes il est souvent très important de bien détecter la modalité sous-représentée. On pourra donc donner un poids plus fort lorsqu’on détecte mal cette modalité.
+
+## II.2.D. Calcul de la sous-suite d'arbres optimaux
+
+```{r}
+
+```
+
+ 
 # V. Résultats

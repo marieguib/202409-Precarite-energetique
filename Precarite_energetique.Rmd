@@ -1392,12 +1392,6 @@ On s'assure que nos données sous bien sous forme de dataframe
 df_final <- as.data.frame(df_final)
 ```
 
-On paramètre les codes insee comme des identifiants
-
-```{r}
-df_final <- df_final %>% 
-  column_to_rownames(var="code_insee")
-```
 
 ```{r}
 head(df_final)
@@ -1426,173 +1420,20 @@ df_final <- df_final %>%
 
 A revoir si je supprime vraiment 19 lignes.....
 
-# II. Statistiques descriptives
 
-## II.1.Statistiques classiques
-
-```{r}
-summary(df_final)
-str(df_final)
-```
-
-## II.2. Analyse univariée
-
-### II.2.A. Variables qualitatives
+# II. Export de la base de données finale
 
 ```{r}
-ggplot(df_final, aes(x = ecoquartiers)) +
-  geom_bar(fill = "lightgreen") +
-  xlab("Communes avec au moins un éco-quartier") +
-  ylab("Nombre de communes") +
-  ggtitle("Répartition des communes avec au moins un éco-quartier") +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-```{r}
-ggplot(df_final, aes(x = "", fill = beneficiaire_prog)) +
-  geom_bar(width = 1, stat = "count") +
-  coord_polar("y", start = 0) +
-  labs(title = "Communes de Bretagne bénéficiaires d'un programme (ACV, PVD...)",
-       fill = "Bénéficiaire",
-       x = NULL,
-       y = NULL) +
-  theme_void() +
-  theme(plot.title = element_text(hjust = 0.5))+
-  scale_fill_brewer(palette = 8)
-```
-```{r}
-ggplot(df_final)+
-  aes(x=gridens7)+
-  geom_bar(aes(fill=gridens7))+
-  labs(title = "Densité des communes de Bretagne",
-       fill = "Grille de densité \nen 7 niveaux",
-       x = "Densité",
-       y = "Nombre de communes")+
-  theme(plot.title = element_text(hjust = 0.5))+
-  scale_fill_brewer()
-```
+FILE_KEY_OUT_S3 <- "Sujet_master/Data/BDD_finale/bdd_finale.csv"
+BUCKET_OUT <- "marieguibert2"
 
-
-
-```{r}
-ggplot(df_final, aes(x = "", fill = climat)) +
-  geom_bar(width = 1, stat = "count") +
-  coord_polar("y", start = 0) +
-  labs(title = "Climat des communes en Bretagne",
-       fill = "Climat",
-       x = NULL,
-       y = NULL) +
-  theme_void() +
-  scale_color_manual(values=c("skyblue","red","darkgreen"))+
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-```{r}
-ggplot(df_final, aes(x = "", fill = gare_tgv)) +
-  geom_bar(width = 1, stat = "count") +
-  coord_polar("y", start = 0) +
-  labs(title = "Communes de Bretagne avec une gare TGV",
-       fill = "Gare TGV",
-       x = NULL,
-       y = NULL) +
-  theme_void() +
-  theme(plot.title = element_text(hjust = 0.5))+
-  scale_fill_brewer(palette = 4)
-```
-
-
-### II.2.B. Variables quantitatives
-
-```{r}
-ggplot(df_final, aes(x = p_pop)) +
-  geom_histogram(binwidth = 5000, fill = "darkred") +
-  labs(title = "Distribution de la population des communes de Bretagne",
-       x = "Population",
-       y = "Nombre de communes") +
-  theme_minimal()+
-  coord_cartesian(xlim = c(0, 50000))+
-  theme(plot.title = element_text(hjust = 0.5))
-```
-```{r}
-ggplot(df_final, aes(y = moyenne_conso_totale)) +
-  geom_boxplot(fill = "cadetblue4") +
-  labs(title = "Moyenne de consommation totale d'électricité \net de gaz des communes de Bretagne (en MwH)",
-       y = "Consommation") +
-  theme_minimal()+
-  coord_cartesian(ylim = c(0, 40000))+
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-
-```{r}
-# Charger les librairies ggplot2 et patchwork
-library(ggplot2)
-library(patchwork)
-
-# Premier graphique : distribution de la population des communes
-graphique_population <- ggplot(df_final, aes(x = nb_inactifs)) +
-  geom_histogram(binwidth = 250, fill = "orchid") +
-  labs(title = "Distribution de la population inactive des communes de Bretagne",
-       x = "Inactifs",
-       y = "Nombre de communes") +
-  theme_minimal() +
-  coord_cartesian(xlim = c(0, 3000)) +  # Limiter l'axe x à 20 000
-  theme(plot.title = element_text(hjust = 0.5))
-
-# Deuxième graphique : distribution des actifs des communes
-graphique_actifs <- ggplot(df_final, aes(x = nb_actifs)) +
-  geom_histogram(binwidth = 250, fill = "darkmagenta") +
-  labs(title = "Distribution de la poplation active des communes de Bretagne",
-       x = "Actifs",
-       y = "Nombre de communes") +
-  theme_minimal() +
-  coord_cartesian(xlim = c(0, 5000)) +  # Limiter l'axe x à 20 000
-  theme(plot.title = element_text(hjust = 0.5))
-
-# Superposer les deux graphiques
-graphique_combine <- graphique_population + graphique_actifs + plot_layout(ncol = 1)
-
-# Afficher le graphique combiné
-print(graphique_combine)
-```
-
-```{r}
-ggplot(df_final, aes(x = "", y = nb_actifs)) +
-  geom_boxplot(fill = "skyblue", color = "steelblue") +
-  labs(title = "Répartition du nombre d'actifs par commune", x = "", y = "Nombre d'actifs") +
-  coord_cartesian(ylim = c(0, 12000))+
-  theme_minimal()
-```
-
-
-# II.3. Analyse bivariée / multivariée
-
-```{r}
-df_num <- df_final[sapply(df_final, is.numeric)]
-```
-
-```{r}
-matrixcorr <- cor(df_num)
-corrplot(matrixcorr)
-```
-
-# II. Constitution de la base de données finale
-
-```{r}
-df_final <- df_final %>% 
-  select(-c(moyenne_conso_agri, moyenne_conso_indus, moyenne_conso_tertiaire, moyenne_conso_residentiel)) 
-
-df_final <- df_final %>% 
-  select(-nb_inactifs)
-```
-
-```{r}
-df_num <- df_final[sapply(df_final, is.numeric)]
-```
-
-```{r}
-matrixcorr <- cor(df_num)
-corrplot(matrixcorr)
+aws.s3::s3write_using(
+    df_final,
+    FUN = readr::write_csv, 
+    object = FILE_KEY_OUT_S3,
+    bucket = BUCKET_OUT,
+    opts = list("region" = "")
+)
 ```
 
 
