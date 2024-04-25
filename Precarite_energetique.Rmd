@@ -1349,6 +1349,8 @@ head(jeunes_sans_diplome)
 
 ## I.3. Constitution de la base de données
 
+### I.3.A. Rassemblement de toutes les données
+
 Nous allons maintenant constituer notre base de données pour pouvoir avoir toutes les informations dans un seul et même dataframe
 
 ```{r}
@@ -1397,7 +1399,8 @@ df_final <- as.data.frame(df_final)
 head(df_final)
 ```
 
-## I.4. Gestion des valeurs manquantes
+
+### I.3.B. Gestion des valeurs manquantes
 
 Nous allons d'abord analyser si nous avons beaucoup de valeurs manquantes : 
 
@@ -1419,6 +1422,16 @@ df_final <- df_final %>%
 ```
 
 A revoir si je supprime vraiment 19 lignes.....
+
+
+### I.3.C Mise à l'échelle des données
+
+Pour avoir des données cohérentes, je vais réduire les colonnes qui présentent d'importants écarts et qui peuvent changer l'interprétation de notre modélisation
+
+```{r}
+df_final$con
+```
+
 
 
 # II. Export de la base de données finale
