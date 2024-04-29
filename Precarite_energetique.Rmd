@@ -18,6 +18,9 @@ library(stringr)
 library(ggplot2)
 library(tidyr)
 library(tidyverse)
+library(httr)
+library(jsonlite)
+
 
 library(corrplot)
 ```
@@ -411,6 +414,24 @@ emissions_ges <- emissions_ges %>%
   filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
 
 head(emissions_ges)
+```
+
+#### c) Conseil France Rénov'
+
+```{r}
+url_api <-  "https://data.ademe.fr/data-fair/api/v1/datasets/sare_tbs/values_agg?field=COMMUNE&metric=sum&metric_field=nb_actes&q=Bretagne&q_fields=REGION"
+
+
+response <- GET(url_api)
+response <- fromJSON(rawToChar(response$content), flatten = TRUE)
+response <- as.data.frame(response)
+
+france_renov <- response %>% 
+  select(aggs.value, aggs.metric) %>% 
+  rename("nb_actes_renov" = aggs.metric,
+         "Commune"= aggs.value)
+
+head(france_renov)
 ```
 
 
@@ -1425,6 +1446,12 @@ Nous allons afficher les lignes qui comportent des données manquantes :
 which(is.na(df_final))
 ```
 
+Suppression des données manquantes
+
+```{r}
+df_final <- df_final %>% 
+  drop_na()
+```
 
 
 
