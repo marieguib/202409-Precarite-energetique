@@ -433,9 +433,19 @@ response <- fromJSON(rawToChar(response$content), flatten = TRUE)
 #   rename("nb_actes_renov" = aggs.metric,
 #          "Commune"= aggs.value)
 
-france_renov29 <- response$aggs
+france_renov29 <- response$aggs$metric
+france_renov29_code_insee <-response$aggs$results
 
-premier_element <- premier_element <- sapply(france_renov29$results, function(france_renov29) france_renov29[[1]])
+for (i in seq_along(france_renov29_code_insee)){
+  function(x) {
+  premier_element <- x[[i]][[1,1]]  
+  return(premier_element)
+}}
+
+
+
+
+premier_element <- sapply(france_renov29$results, function(france_renov29) france_renov29[[1]])
 ```
 
 
