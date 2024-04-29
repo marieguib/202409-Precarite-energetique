@@ -418,20 +418,91 @@ head(emissions_ges)
 
 #### c) Conseil France Rénov'
 
-```{r}
-url_api <-  "https://data.ademe.fr/data-fair/api/v1/datasets/sare_tbs/values_agg?field=COMMUNE&metric=sum&metric_field=nb_actes&q=Bretagne&q_fields=REGION"
+# A FINIR
 
+```{r}
+# DPT 29
+url_api <-  "https://data.ademe.fr/data-fair/api/v1/datasets/sare_tbs/values_agg?field=COMMUNE&metric=sum&metric_field=nb_actes&agg_size=1000&q=29&q_fields=DEPARTEMENT_CODE&size=2&select=codeInsee"
+
+response <- GET(url_api)
+response <- fromJSON(rawToChar(response$content), flatten = TRUE)
+
+
+# france_renov29 <- response %>% 
+#   select(aggs.value, aggs.metric) %>% 
+#   rename("nb_actes_renov" = aggs.metric,
+#          "Commune"= aggs.value)
+
+france_renov29 <- response$aggs
+
+premier_element <- premier_element <- sapply(france_renov29$results, function(france_renov29) france_renov29[[1]])
+```
+
+
+
+
+
+```{r}
+# DPT 35
+url_api <-  "https://data.ademe.fr/data-fair/api/v1/datasets/sare_tbs/values_agg?field=COMMUNE&metric=sum&metric_field=nb_actes&agg_size=1000&q=35&q_fields=DEPARTEMENT_CODE&size=2&select=codeInsee"
 
 response <- GET(url_api)
 response <- fromJSON(rawToChar(response$content), flatten = TRUE)
 response <- as.data.frame(response)
 
-france_renov <- response %>% 
+france_renov35 <- response %>% 
   select(aggs.value, aggs.metric) %>% 
   rename("nb_actes_renov" = aggs.metric,
          "Commune"= aggs.value)
 
+head(france_renov35)
+
+# DPT 22
+url_api <-  "https://data.ademe.fr/data-fair/api/v1/datasets/sare_tbs/values_agg?field=COMMUNE&metric=sum&metric_field=nb_actes&agg_size=1000&q=22&q_fields=DEPARTEMENT_CODE&size=2&select=codeInsee"
+
+response <- GET(url_api)
+response <- fromJSON(rawToChar(response$content), flatten = TRUE)
+response <- as.data.frame(response)
+
+france_renov22 <- response %>% 
+  select(aggs.value, aggs.metric) %>% 
+  rename("nb_actes_renov" = aggs.metric,
+         "Commune"= aggs.value)
+
+head(france_renov22)
+
+# DPT 56
+url_api <-  "https://data.ademe.fr/data-fair/api/v1/datasets/sare_tbs/values_agg?field=COMMUNE&metric=sum&metric_field=nb_actes&agg_size=1000&q=56&q_fields=DEPARTEMENT_CODE&size=2&select=codeInsee"
+
+response <- GET(url_api)
+response <- fromJSON(rawToChar(response$content), flatten = TRUE)
+response <- as.data.frame(response)
+
+france_renov56 <- response %>% 
+  select(aggs.value, aggs.metric) %>% 
+  rename("nb_actes_renov" = aggs.metric,
+         "Commune"= aggs.value)
+
+head(france_renov56)
+```
+
+```{r}
+france_renov <- rbind(france_renov35, france_renov22, france_renov29, france_renov56)
+
+rm(france_renov35)
+rm(france_renov22)
+rm(france_renov29)
+rm(france_renov56)
+```
+
+
+```{r}
 head(france_renov)
+```
+
+
+```{r}
+france_renov <- merge()
 ```
 
 
@@ -642,70 +713,7 @@ zonages_prog <- zonages_prog %>%
   rename(code_insee = codgeo)
 ```
 
-#### b) CRTE
-
-On importe ensuite les données concernant les communes couvertes par les CRTE 
-
-```{r message = FALSE}
-FILE_KEY_S3 <- "Sujet_master/Data/X/Urbanisme/liste-crte-com2023-20230823.csv"
-
-liste_crte <- 
-  aws.s3::s3read_using(
-    FUN = readr::read_delim,
-    object = FILE_KEY_S3,
-    bucket = BUCKET,
-    opts = list("region" = "")
-  )
-
-head(liste_crte)
-```
-
-On ne conserve seulement que la colonne avec le code commune et on ajoute une colonne avec la valeur 1 pour signifier qu'elles sont couvertes par les CRTE (variable binaire)
-
-```{r}
-liste_crte <- liste_crte %>% 
-  select(1) %>% 
-  group_by(insee_com) %>% 
-  mutate("couverte_crte" = 1)
-
-head(liste_crte)
-```
-
-Nous allons seulement conserver les communes de Bretagne
-
-```{r}
-liste_crte <- liste_crte %>% 
-  filter(substr(insee_com, 1, 2) %in% c("22", "29", "35", "56")) 
-```
-
-Nous avons une commune manquante que nous allons ajouter
-
-```{r}
-communes_crte <- merge(liste_crte, communes, 
-                                  by.x = "insee_com",  by.y = "code_commune", 
-                                  all = TRUE, suffix = c("_crte", "_com"))
-
-# Mettre 0 pour les valeurs non renseignées
-communes_crte$couverte_crte <- ifelse(is.na(communes_crte$couverte_crte), 0, 1)
-
-communes_crte <- communes_crte %>% 
-  select(insee_com, couverte_crte)
-
-head(communes_crte)
-```
-
-```{r}
-communes_crte <- communes_crte %>% 
-  rename(code_insee = insee_com)
-```
-
-```{r}
-# Suppression variables inutiles
-rm(liste_crte)
-```
-
-
-#### c) Loi littoral (climat)
+#### b) Loi littoral (climat)
 
 Nous allons à présent importer les données pour savoir si la commune est concernée par la loi littoral (COG de 2022)
 
@@ -780,7 +788,7 @@ loi_littoral <- loi_littoral %>%
   rename(code_insee = INSEE_COM)
 ```
 
-#### d) Densité
+#### c) Densité
 
 Nous allons ensuite importer les données qui décrivent la grille communale de densité en 7 niveaux : 
 - niveau 1 : Grands centres urbains
@@ -829,7 +837,7 @@ densite7 <- densite7 %>%
 ```
 
 
-#### e) Superficie
+#### d) Superficie
 
 Nous allons ensuite importer les données concernant la superficie de chaque commune
 

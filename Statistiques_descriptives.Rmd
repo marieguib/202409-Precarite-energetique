@@ -34,3 +34,7 @@ donnees <-
 
 ## II.2. Analyse bivariée
 
+```{r}
+
+```
+
