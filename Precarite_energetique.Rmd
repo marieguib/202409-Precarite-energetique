@@ -28,13 +28,13 @@ Tout d'abord, nous allons nous focaliser sur la région Bretagne dans un premier
 
 ## I.1. Variable à expliquer
 
-On importe d'abord les données CHORUS concernant le programme 380 (fonds vert) au niveau communal pour récupérer les informations nécessaires à notre étude. 
+On importe d'abord les données CHORUS concernant le programme 380 (fonds vert) et les données de l'ADEME au niveau communal pour récupérer les informations nécessaires à notre étude. Ces deux programmes concernent la transition écologique c'est pourquoi ils ont été choisis.
 
 ```{r message = FALSE}
 BUCKET <- "marieguibert2"
-FILE_KEY_S3 <- "Sujet_master/Data/Y/prog380_communes.csv"
+FILE_KEY_S3 <- "Sujet_master/Data/Y/prog380ademe_communes.csv"
 
-ae_fonds_vert <- 
+ae_transition_eco <- 
   aws.s3::s3read_using(
     FUN = readr::read_csv, 
     object = FILE_KEY_S3,
@@ -42,26 +42,34 @@ ae_fonds_vert <-
     opts = list("region" = "")
   )
 
-ae_fonds_vert$beneficiaire_code <- as.character(ae_fonds_vert$beneficiaire_code)
+ae_transition_eco$beneficiaire_code <- as.character(ae_transition_eco$beneficiaire_code)
 
-head(ae_fonds_vert)
+head(ae_transition_eco)
+```
+
+On ne récupère les données que pour l'année 2023
+
+```{r}
+ae_transition_eco <- ae_transition_eco %>% 
+  filter(annee == "2023") %>% 
+  filter(substr(code_commune, 1, 2) %in% c("22", "29", "35", "56"))
 ```
 
 ```{r}
-dim(ae_fonds_vert)
+dim(ae_transition_eco)
 ```
 
-Nous avons 232 bénéficiaires de ce programme et 68 colonnes. 
+Nous avons 460 lignes dans notre dataframe et 68 colonnes. 
 Nous allons vérifier que nos données ne contiennent bien que des communes :
 
 ```{r include=FALSE}
 # Vérification qu'on ait que des communes
-table(ae_fonds_vert$denomination)
+table(ae_transition_eco$denomination)
 ```
 
 ```{r}
 # Vérification que toutes les données soient sur 2023
-table(ae_fonds_vert$annee)
+table(ae_transition_eco$annee)
 ```
 
 Ce tableau nous montre que le programme du fonds vert ne contient des données seulement pour l'année 2023. 
@@ -73,27 +81,28 @@ Nous allons nous intéresser au code INSEE de la commune du SIRET et le montant 
 *Ici, le "code_commune" correspond à la commune du SIRET (jointure réalisée précédemment dans SQL Lab)*
 
 ```{r}
-ae_fonds_vert_montant <- ae_fonds_vert %>% 
+ae_transition_eco_montant <- ae_transition_eco %>% 
   select(code_commune, montant_ae) %>% 
   group_by(code_commune) %>% 
   summarize(somme_ae = sum(montant_ae))
 
-head(ae_fonds_vert_montant)
+head(ae_transition_eco_montant)
 ```
 
-### Nombre de demandes de financements
+### Demandes de financements
 
 Nous allons grouper par **commune du SIRET** pour avoir une approche communale et pour savoir le nombre de projets par commune.
 
 ```{r}
-ae_fonds_vert_nb <- ae_fonds_vert %>%
+ae_transition_eco_nb <- ae_transition_eco %>%
   group_by(code_commune) %>%
   summarize(nb_projets = n())
 
-head(ae_fonds_vert_nb)
+head(ae_transition_eco_nb)
 ```
+
 ```{r}
-table(ae_fonds_vert_nb$nb_projets)
+table(ae_transition_eco_nb$nb_projets)
 ```
 
 Puisque nous avons une grande majorité de communes demandant un seul financement, nous allons passer notre variable en binaire : "a demandé un financement / n'a pas demandé de financement".
@@ -103,19 +112,19 @@ Puisque nous avons une grande majorité de communes demandant un seul financemen
 Cette manipulation va nous simplifier le travail
 
 ```{r}
-ae_fonds_vert_binaire <- ae_fonds_vert %>%
+ae_transition_eco_binaire <- ae_transition_eco %>%
   select(code_commune) %>% 
   group_by(code_commune) %>%
-  summarize(beneficiaire_prog380 = 1)
+  summarize(beneficiaire_trans_eco = 1)
 
 
 # Conversion pour avoir les mêmes types que dans le fichier communes
-ae_fonds_vert_binaire$code_commune <- as.character(ae_fonds_vert_binaire$code_commune)
+ae_transition_eco_binaire$code_commune <- as.character(ae_transition_eco_binaire$code_commune)
 
-head(ae_fonds_vert_binaire)
+head(ae_transition_eco_binaire)
 ```
 
-Notre tableau final contient bien le code de la commune du SIRET et si la commune a demandé un financement (1)
+Notre tableau final contient bien le code de la commune du SIRET et si la commune a demandé un financement concernant un programme de transition écologique (1)
 
 ### Fichier des communes
 
@@ -149,7 +158,7 @@ On ajoute une colonne avec la valeur 0
 
 ```{r}
 communes <- communes %>% 
-  mutate(beneficiaire_prog380 = 0) %>% 
+  mutate(beneficiaire_trans_eco = 0) %>% 
   rename(code_commune = COM)
 ```
 
@@ -161,28 +170,30 @@ Règle : si un code INSEE d'une commune apparaît avec la valeur 0 ET la valeur 
 
 
 ```{r}
-beneficiaires_fonds_vert <- merge(ae_fonds_vert_binaire, communes, 
-                                  by = "code_commune", 
-                                  all = TRUE, suffix = c("_ae", "_com"))
+# Fusionner les deux dataframes
+beneficiaires_prog_trans_eco <- merge(ae_transition_eco_binaire, communes, all = T,
+                                      by = "code_commune",suffix = c("_ae", "_com"))
 
-# Remplacer les valeurs NA par 0
-beneficiaires_fonds_vert$beneficiaire_prog380 <- ifelse(is.na(beneficiaires_fonds_vert$beneficiaire_prog380_ae), 0, 1)
+# Remplacer les valeurs NA par 0 dans la colonne beneficiaire_trans_eco_ae
+beneficiaires_prog_trans_eco$beneficiaire_trans_eco <- ifelse(is.na(beneficiaires_prog_trans_eco$beneficiaire_trans_eco_ae), 
+                                                              0, beneficiaires_prog_trans_eco$beneficiaire_trans_eco_ae)
 
-beneficiaires_fonds_vert <- beneficiaires_fonds_vert %>% 
-  select(code_commune, beneficiaire_prog380)
+# Supprimer les colonnes inutiles
+beneficiaires_prog_trans_eco <- beneficiaires_prog_trans_eco %>%
+  select(code_commune, beneficiaire_trans_eco)
 
-head(beneficiaires_fonds_vert)
+head(beneficiaires_prog_trans_eco)
 ```
 
 ```{r}
-dim(beneficiaires_fonds_vert)
+dim(beneficiaires_prog_trans_eco)
 ```
 
 Nous avons bien 1207 communes (nombre de communes en Bretagne)
 
 ```{r}
 # Renommage de la colonne pour le code commune en code INSEE
-beneficiaires_fonds_vert <- beneficiaires_fonds_vert %>% 
+beneficiaires_prog_trans_eco <- beneficiaires_prog_trans_eco %>% 
   rename(code_insee = code_commune)
 ```
 
@@ -191,13 +202,13 @@ beneficiaires_fonds_vert <- beneficiaires_fonds_vert %>%
 Nous allons analyser la distribution des 1 et 0 dans notre variable à expliquer
 
 ```{r}
-ggplot(beneficiaires_fonds_vert)+
-  aes(x = beneficiaire_prog380)+
+ggplot(beneficiaires_prog_trans_eco)+
+  aes(x = beneficiaire_trans_eco)+
   geom_bar(fill="lightblue")+
-  ggtitle("Nombre de communes ayant demandé un financement pour le programme 380")
+  ggtitle("Nombre de communes ayant demandé un financement pour un\nprogramme financier favorisant la transition écologique")
 ```
 ```{r}
-table(beneficiaires_fonds_vert$beneficiaire_prog380)
+table(beneficiaires_prog_trans_eco$beneficiaire_trans_eco)
 ```
 
 Nous avons donc des données déséquilibrées à traiter de ce cas là.
@@ -205,10 +216,10 @@ Nous avons donc des données déséquilibrées à traiter de ce cas là.
 
 ```{r}
 # Suppression des variables inutiles
-rm(ae_fonds_vert)
-rm(ae_fonds_vert_binaire)
-rm(ae_fonds_vert_montant)
-rm(ae_fonds_vert_nb)
+rm(ae_transition_eco)
+rm(ae_transition_eco_binaire)
+rm(ae_transition_eco_montant)
+rm(ae_transition_eco_nb)
 ```
 
 ## I.2. Variables explicatives
@@ -1354,7 +1365,7 @@ head(jeunes_sans_diplome)
 Nous allons maintenant constituer notre base de données pour pouvoir avoir toutes les informations dans un seul et même dataframe
 
 ```{r}
-liste_dataframes <- list(beneficiaires_fonds_vert, conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, emissions_ges,
+liste_dataframes <- list(beneficiaires_prog_trans_eco, conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, emissions_ges,
 friches, communes_eco_quartiers, nb_res_secondaires, zonages_prog, loi_littoral, 
 densite7,  superficie, gares, part_deplacement_dom_travail, 
 revenu_dispo, pop, elus,taux_endettement, nb_inactifs, nb_actifs, dependance_eco, taux_abstention, taux_creation_entreprises, nb_entreprises,
@@ -1376,7 +1387,7 @@ df_final$beneficiaire_prog <- as.factor(df_final$beneficiaire_prog)
 df_final$gridens7 <- as.factor(df_final$gridens7)
 df_final$gare_tgv <- as.factor(df_final$gare_tgv)
 df_final$CSP_maire <- as.factor(df_final$CSP_maire)
-df_final$beneficiaire_prog380 <- as.factor(df_final$beneficiaire_prog380) # variable à expliquer
+df_final$beneficiaire_trans_eco <- as.factor(df_final$beneficiaire_trans_eco) # variable à expliquer
 
 
 # Transformation en variable numérique
@@ -1414,14 +1425,7 @@ Nous allons afficher les lignes qui comportent des données manquantes :
 which(is.na(df_final))
 ```
 
-Supression des données manquantes
 
-```{r}
-df_final <- df_final %>% 
-  drop_na()
-```
-
-A revoir si je supprime vraiment 19 lignes.....
 
 
 ### I.3.C Mise à l'échelle des données
@@ -1429,7 +1433,7 @@ A revoir si je supprime vraiment 19 lignes.....
 Pour avoir des données cohérentes, je vais réduire les colonnes qui présentent d'importants écarts et qui peuvent changer l'interprétation de notre modélisation
 
 ```{r}
-df_final$con
+
 ```
 
 
