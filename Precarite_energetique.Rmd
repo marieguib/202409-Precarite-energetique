@@ -1391,6 +1391,11 @@ head(jeunes_sans_diplome)
 ```
 
 
+#### c) Nombre d'association
+
+
+
+
 ## I.3. Constitution de la base de données
 
 ### I.3.A. Rassemblement de toutes les données
@@ -1471,7 +1476,20 @@ df_final <- df_final %>%
 Pour avoir des données cohérentes, je vais réduire les colonnes qui présentent d'importants écarts et qui peuvent changer l'interprétation de notre modélisation
 
 ```{r}
+df_final$moyenne_conso_agri <- df_final$moyenne_conso_agri/df_final$p_pop
+df_final$moyenne_conso_indus <- df_final$moyenne_conso_indus/df_final$p_pop
+df_final$moyenne_conso_tertiaire <- df_final$moyenne_conso_tertiaire/df_final$p_pop
+df_final$moyenne_conso_residentiel <- df_final$moyenne_conso_residentiel/df_final$p_pop
+df_final$moyenne_conso_totale <- df_final$moyenne_conso_totale/df_final$p_pop
 
+
+df_final$emissions_ges <- df_final$emissions_ges/df_final$p_pop
+
+df_final$nb_inactifs <- df_final$nb_inactifs/df_final$p_pop
+df_final$nb_actifs <- df_final$nb_actifs/df_final$p_pop
+
+df_final$total_entreprises <- df_final$total_entreprises/df_final$p_pop
+df_final$nb_licencies_sportifs <- df_final$nb_licencies_sportifs/df_final$p_pop
 ```
 
 
