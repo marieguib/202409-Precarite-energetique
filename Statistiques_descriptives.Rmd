@@ -26,6 +26,16 @@ donnees <-
 
 # II. Statistiques descriptives
 
+```{r}
+library(corrplot)
+corrplot(cor(donnees), method="circle")
+corrplot(cor(donnees), method="number")
+```
+
+```{r}
+cor(donnees)
+```
+
 ## II.1. Analyse univariée
 
 ```{r}

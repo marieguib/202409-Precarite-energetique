@@ -1488,7 +1488,6 @@ df_final$emissions_ges <- df_final$emissions_ges/df_final$p_pop
 df_final$nb_inactifs <- df_final$nb_inactifs/df_final$p_pop
 df_final$nb_actifs <- df_final$nb_actifs/df_final$p_pop
 
-df_final$total_entreprises <- df_final$total_entreprises/df_final$p_pop
 df_final$nb_licencies_sportifs <- df_final$nb_licencies_sportifs/df_final$p_pop
 ```
 
