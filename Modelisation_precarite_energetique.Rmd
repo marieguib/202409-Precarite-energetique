@@ -33,14 +33,14 @@ donnees <-
 # III. Modélisation statistique
 
 ```{r}
-donnees$beneficiaire_prog380 <- as.factor(donnees$beneficiaire_prog380) # Par sécurité
+donnees$beneficiaire_trans_eco <- as.factor(donnees$beneficiaire_trans_eco) # Par sécurité
 ```
 
 On positionne la variable à expliquer en dernier dans le dataframe : 
 
 ```{r}
 donnees <- donnees %>% 
-  select(-beneficiaire_prog380, everything())
+  select(-beneficiaire_trans_eco, everything())
 ```
 
 ```{r}
@@ -68,54 +68,61 @@ dtest <- donnees[-perm[1:800],]
 Nous allons d'abord construire le modèle avec toutes les variables explicatives :
 
 ```{r}
-modele_reg_log1 <- glm(beneficiaire_prog380 ~ ., data = dapp, family = binomial) # modele logit
-summary(modele_reg_log1)
+modele_complet_reg_log <- glm(beneficiaire_trans_eco ~ ., data = dapp, family = binomial) # modele logit
+summary(modele_complet_reg_log)
 ```
 
+
+Les variables explicatives au seuil de 5% sont : 
+- le nombre d'actes france renov
+- la densité de la commune
+- la superficie de la commune
+- le nombre total d'entreprises
+
+
+
+=> PAS POSSIBLE: TROP DE VARIABLES => SELECTION A FAIRE AVANT ??
+
+On sélectionne le meilleur modèle en termes d'AIC et de BIC
+
+```{r}
+model_BIC <- bestglm(dapp,family=binomial,IC="BIC")
+model_BIC$BestModel
+
+model_AIC <- bestglm(dapp,family=binomial,IC="AIC")
+model_AIC$BestModel
+```
 
 ### III.1.C. Sélection de variables
 
-Sélection backward
+**Méthode pas à pas**
 
 ```{r}
-step(object = modele_reg_log1, direction = "backward")
+model0 <- glm(beneficiaire_trans_eco~1,data=dapp,family=binomial) # le plus petit modèle possible
+model_AIC <- step(object = model0,scope = formula(modele_complet_reg_log),direction = "forward")
 ```
+
+Concernant la méthode pas à pas montante, dans l'objectif de minimiser l'AIC, on obtient un modèle à **6** explicatives.
+On part du modèle qui ne contient que l'intercept et on ajoute une variable explicative à chaque fois. On retient le modèle qui minimise l'AIC. 
+
+```{r}
+modele_BIC <- step(object = model0,scope = formula(modele_complet_reg_log),direction = "forward",k=log(nrow(donnees)))
+```
+
+Concernant la méthode pas à pas dans l'objectif de minimiser le BIC, on obtient un modèle à 2 variables explicatives. En minimisant le BIC, on obtient un modèle plus parcimonieux.
 
 
 ### III.1.D. Critères
 
-Recherche pour les critères AIC et BIC
-
+=> NE FONCTIONNE PAS (voir au-dessus)
 ```{r}
-modele_glm_BIC <- bestglm(dapp,family = binomial, IC = "BIC")
-modele_glm_BIC$BestModel
+c(AIC(model_AIC$BestModel),AIC(model_BIC$BestModel))
 ```
 
 ```{r}
-modele_glm_AIC <- bestglm(dapp,family = binomial, IC = "AIC")
-modele_glm_AIC$BestModel
+c(BIC(model_AIC$BestModel),BIC(model_BIC$BestModel))
 ```
 
-### III.1.D. Sélection de variables
-
-On retient le modèle qui minimise l'AIC :
-
-```{r}
-modele_glm0 <- glm(beneficiaire_prog380~1, data = dapp, family = binomial)
-step(object = modele_glm0, scope = formula(modele_reg_log1), direction = "forward")
-```
-
-On retient le modèle qui minimise le BIC:
-
-```{r}
-step(object = modele_glm0, scope = formula(modele_reg_log1), direction = "forward", k = log(nrow(donnees)))
-```
-
-Comparaison des deux modèles : 
-
-```{r}
-
-```
 
 ### III.1.E. Prévisions et erreurs
 
@@ -123,6 +130,38 @@ Comparaison des deux modèles :
 - Nombre de fois où la valeur prédite est différente de celle observée
 
 - Odds ratio
+
+On utilise les deux modèles avec l'AIC et le BIC les plus faibles.
+
+Calcul des scores de chaque individu de l'échantillon test :
+```{r}
+best_AIC <- predict(model_AIC,newdata=dtest,type="response")
+best_BIC <- predict(modele_BIC,newdata=dtest,type="response")
+```
+
+On calcule les erreurs moyennes par modèle:
+
+```{r}
+mean(round(best_AIC)!=dtest$beneficiaire_trans_eco)
+```
+
+On calcule le nombre de fois où la valeur prédite est différente de celle observée.
+
+```{r}
+mean(round(best_BIC)!=dtest$beneficiaire_trans_eco)
+```
+
+
+Les erreurs en termes de prévision sur cet échantillon test sont donc très proches.
+
+L'erreur de VC hold-out est trop dépendante du partitionnement et donc on privilégie l'erreur de VC K-fold.
+
+Un autre argument peut être trouvé en dressant les tables de confusion pour chaque modèle :
+
+```{r}
+table(prev=as.numeric(best_AIC>0.5),obs=dtest$beneficiaire_trans_eco)
+table(prev=as.numeric(best_BIC>0.5),obs=dtest$beneficiaire_trans_eco)
+```
 
 
 ## III.2. Arbres
