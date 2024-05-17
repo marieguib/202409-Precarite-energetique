@@ -1431,6 +1431,7 @@ On transforme les variables pour les avoir dans le bon format
 df_final$ecoquartiers <- as.factor(df_final$ecoquartiers)
 df_final$beneficiaire_prog <- as.factor(df_final$beneficiaire_prog)
 df_final$gridens7 <- as.factor(df_final$gridens7)
+df_final$departement <- as.factor(df_final$departement)
 df_final$gare_tgv <- as.factor(df_final$gare_tgv)
 df_final$CSP_maire <- as.factor(df_final$CSP_maire)
 df_final$beneficiaire_trans_eco <- as.factor(df_final$beneficiaire_trans_eco) # variable à expliquer
