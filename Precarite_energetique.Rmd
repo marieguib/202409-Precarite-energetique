@@ -1,5 +1,5 @@
 ---
-title: "Quelles seront les sollicitations de subventions pour le fonds verts des communes en Bretagne ? Et pourquoi ?"
+title: "Existe-il des facteurs influençant les demandes de subventions des communes de Bretagne en faveur de la transition écologique ? Si oui, pourquoi ?"
 author: "Marie Guibert"
 date: "2024-03-05"
 output:
@@ -20,9 +20,6 @@ library(tidyr)
 library(tidyverse)
 library(httr)
 library(jsonlite)
-
-
-library(corrplot)
 ```
 
 # I. Importations et traitements des données
@@ -884,6 +881,17 @@ superficie <- superficie %>%
   rename(code_insee = codgeo)
 ```
 
+#### e) Département
+
+Nous allons définir la variable Département pour savoir si le département d'appartenance de la commune joue un rôle dans sa demande de subventions en faveur de la transition écologique
+
+```{r}
+departements <- as.data.frame(cbind("code_insee" = communes$code_commune, 
+                      "departement" = substr(communes$code_commune, 1,2)))
+head(departements)
+```
+
+
 ### I.2.D. Transport
 
 Nous allons maintenant importer des données concernant la thématique du transport.
@@ -1404,7 +1412,8 @@ Nous allons maintenant constituer notre base de données pour pouvoir avoir tout
 
 ```{r}
 liste_dataframes <- list(beneficiaires_prog_trans_eco, conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, emissions_ges, france_renov, friches, communes_eco_quartiers, nb_res_secondaires, zonages_prog, loi_littoral, 
-densite7,  superficie, gares, part_deplacement_dom_travail, 
+densite7,  superficie, departements, 
+gares, part_deplacement_dom_travail, 
 revenu_dispo, pop, elus,taux_endettement, nb_inactifs, nb_actifs, dependance_eco, taux_abstention, taux_creation_entreprises, nb_entreprises,
 sportifs_licencies, jeunes_sans_diplome)
 
