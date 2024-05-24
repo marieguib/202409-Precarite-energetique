@@ -1493,10 +1493,10 @@ df_final$moyenne_conso_residentiel <- df_final$moyenne_conso_residentiel/df_fina
 df_final$moyenne_conso_totale <- df_final$moyenne_conso_totale/df_final$p_pop
 
 
-df_final$nb_inactifs <- df_final$nb_inactifs/df_final$p_pop
-df_final$nb_actifs <- df_final$nb_actifs/df_final$p_pop
+df_final$nb_inactifs <- (df_final$nb_inactifs/df_final$p_pop)*100
+df_final$nb_actifs <- (df_final$nb_actifs/df_final$p_pop)*100
 
-df_final$nb_licencies_sportifs <- df_final$nb_licencies_sportifs/df_final$p_pop
+df_final$nb_licencies_sportifs <- (df_final$nb_licencies_sportifs/df_final$p_pop)*100
 ```
 
 
