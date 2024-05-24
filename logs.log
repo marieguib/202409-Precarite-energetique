@@ -522,3 +522,60 @@ Alternately, you can install this by running `pip install pycaret[models]`
 2024-05-24 16:39:43,345:INFO:           evidently: Not installed
 2024-05-24 16:39:43,345:INFO:               fugue: Not installed
 2024-05-24 16:39:43,345:INFO:           streamlit: Not installed
+2024-05-24 16:39:43,345:INFO:             prophet: Not installed
+2024-05-24 16:39:43,349:INFO:None
+2024-05-24 16:39:43,349:INFO:Set up data.
+2024-05-24 16:39:43,360:INFO:Set up folding strategy.
+2024-05-24 16:39:43,360:INFO:Set up train/test split.
+2024-05-24 16:39:43,413:INFO:Set up index.
+2024-05-24 16:39:43,413:INFO:Assigning column types.
+2024-05-24 16:39:43,413:INFO:Engine successfully changes for model 'lr' to 'sklearn'.
+2024-05-24 16:39:43,512:INFO:Engine for model 'knn' has not been set explicitly, hence returning None.
+2024-05-24 16:39:43,522:INFO:Engine for model 'rbfsvm' has not been set explicitly, hence returning None.
+2024-05-24 16:39:43,572:WARNING:
+'xgboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install xgboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:43,572:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:43,628:INFO:Engine for model 'knn' has not been set explicitly, hence returning None.
+2024-05-24 16:39:43,630:INFO:Engine for model 'rbfsvm' has not been set explicitly, hence returning None.
+2024-05-24 16:39:43,661:WARNING:
+'xgboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install xgboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:43,661:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:43,661:INFO:Engine successfully changes for model 'knn' to 'sklearn'.
+2024-05-24 16:39:43,713:INFO:Engine for model 'rbfsvm' has not been set explicitly, hence returning None.
+2024-05-24 16:39:43,746:WARNING:
+'xgboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install xgboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:43,746:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:43,814:INFO:Engine for model 'rbfsvm' has not been set explicitly, hence returning None.
+2024-05-24 16:39:43,843:WARNING:
+'xgboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install xgboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:43,843:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:43,858:INFO:Engine successfully changes for model 'rbfsvm' to 'sklearn'.
+2024-05-24 16:39:43,961:WARNING:
+'xgboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install xgboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:43,961:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:44,067:WARNING:
+'xgboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install xgboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:44,068:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2024-05-24 16:39:44,072:INFO:Preparing preprocessing pipeline...
+2024-05-24 16:39:44,076:INFO:Set up simple imputation.
+2024-05-24 16:39:44,077:INFO:Set up encoding of ordinal features.
+2024-05-24 16:39:44,077:INFO:Set up encoding of categorical features.
+2024-05-24 16:39:44,077:INFO:Set up imbalanced handling.
