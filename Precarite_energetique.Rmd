@@ -642,13 +642,12 @@ rm(eco_quartiers)
 #### d) Résidences secondaires
 
 ```{r}
-FILE_KEY_S3 <- "Sujet_master/Data/X/Logement/nb_residences_secondaires.csv"
+FILE_KEY_S3 <- "Sujet_master/Data/X/Logement/part_residences_secondaires.csv"
 
-nb_res_secondaires <- 
+residences_secondaires <- 
   aws.s3::s3read_using(
     FUN = read.csv,
     sep= ";",
-    skip = 2,
     object = FILE_KEY_S3,
     bucket = BUCKET,
     opts = list("region" = "")
@@ -656,15 +655,15 @@ nb_res_secondaires <-
 ```
 
 ```{r}
-nb_res_secondaires <- nb_res_secondaires %>% 
-  select(1,3) %>% 
-  rename("code_insee" = "Code", 
-         "nb_residences_secondaires" = "Nombre.de.résidences.secondaires.2020") %>% 
+residences_secondaires <- residences_secondaires %>% 
+  select(1,4) %>% 
+  rename("code_insee" = "codgeo", 
+         "part_residences_secondaires" = "part_resid2") %>% 
   filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
 
-nb_res_secondaires$nb_residences_secondaires <- as.integer(nb_res_secondaires$nb_residences_secondaires)
+residences_secondaires$part_residences_secondaires <- as.numeric(residences_secondaires$part_residences_secondaires)
 
-head(nb_res_secondaires)
+head(residences_secondaires)
 ```
 
 
@@ -752,18 +751,18 @@ table(loi_littoral$CLASSEMENT)
 Nous allons conserver les communes de Bretagne
 
 ```{r}
-loi_littoral <- loi_littoral %>% 
-  filter(substr(INSEE_COM, 1, 2) %in% c("22", "29", "35", "56")) 
+loi_littoral <- loi_littoral %>%
+  filter(substr(INSEE_COM, 1, 2) %in% c("22", "29", "35", "56"))
 
 table(loi_littoral$CLASSEMENT)
 ```
 
 ```{r}
-loi_littoral <- loi_littoral %>% 
-  mutate(CLASSEMENT = gsub("Estuaire", 1, CLASSEMENT)) %>%
-  mutate(CLASSEMENT = gsub("Mer", 2, CLASSEMENT)) 
-
-table(loi_littoral$CLASSEMENT)
+# loi_littoral <- loi_littoral %>% 
+#   mutate(CLASSEMENT = gsub("Estuaire", 1, CLASSEMENT)) %>%
+#   mutate(CLASSEMENT = gsub("Mer", 2, CLASSEMENT)) 
+# 
+# table(loi_littoral$CLASSEMENT)
 ```
 
 On remarque que nous avons seulement 264 communes de Bretagne, nous allons donc devoir compléter cette variable.
@@ -774,7 +773,7 @@ loi_littoral <- merge(loi_littoral, communes,
                                   all = TRUE, suffix = c("_littoral", "_com"))
 
 # Mettre 0 pour les valeurs non renseignées --> correspond à une commune non concernée par la loi littoral
-loi_littoral$climat <- ifelse(is.na(loi_littoral$CLASSEMENT), 0, loi_littoral$CLASSEMENT)
+loi_littoral$climat <- ifelse(is.na(loi_littoral$CLASSEMENT), "Autre", loi_littoral$CLASSEMENT)
 
 loi_littoral <- loi_littoral %>% 
   select(INSEE_COM, climat) 
@@ -1411,7 +1410,7 @@ head(jeunes_sans_diplome)
 Nous allons maintenant constituer notre base de données pour pouvoir avoir toutes les informations dans un seul et même dataframe
 
 ```{r}
-liste_dataframes <- list(beneficiaires_prog_trans_eco, conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, emissions_ges, france_renov, friches, communes_eco_quartiers, nb_res_secondaires, zonages_prog, loi_littoral, 
+liste_dataframes <- list(beneficiaires_prog_trans_eco, conso_agriculture, conso_industrie, conso_tertiaire, conso_residentiel, conso_totale, emissions_ges, france_renov, friches, communes_eco_quartiers, residences_secondaires, zonages_prog, loi_littoral, 
 densite7,  superficie, departements, 
 gares, part_deplacement_dom_travail, 
 revenu_dispo, pop, elus,taux_endettement, nb_inactifs, nb_actifs, dependance_eco, taux_abstention, taux_creation_entreprises, nb_entreprises,
@@ -1428,6 +1427,7 @@ On transforme les variables pour les avoir dans le bon format
 
 ```{r}
 # Transformation en variable catégorielle (facteur)
+df_final$code_insee <- as.factor(df_final$code_insee)
 df_final$ecoquartiers <- as.factor(df_final$ecoquartiers)
 df_final$beneficiaire_prog <- as.factor(df_final$beneficiaire_prog)
 df_final$gridens7 <- as.factor(df_final$gridens7)
@@ -1493,12 +1493,25 @@ df_final$moyenne_conso_residentiel <- df_final$moyenne_conso_residentiel/df_fina
 df_final$moyenne_conso_totale <- df_final$moyenne_conso_totale/df_final$p_pop
 
 
-df_final$emissions_ges <- df_final$emissions_ges/df_final$p_pop
-
 df_final$nb_inactifs <- df_final$nb_inactifs/df_final$p_pop
 df_final$nb_actifs <- df_final$nb_actifs/df_final$p_pop
 
 df_final$nb_licencies_sportifs <- df_final$nb_licencies_sportifs/df_final$p_pop
+```
+
+
+### I.3.D. Renommage des colonnes 
+
+```{r}
+df_final <- df_final %>% 
+  rename("moyenne_conso_agri_hab" = "moyenne_conso_agri", 
+         "moyenne_conso_indus_hab" = "moyenne_conso_indus", 
+         "moyenne_conso_tertiaire_hab" = "moyenne_conso_tertiaire",
+         "moyenne_conso_residentiel_hab" = "moyenne_conso_residentiel",
+         "moyenne_conso_totale_hab" = "moyenne_conso_totale", 
+         "part_inactifs" = "nb_inactifs", 
+         "part_actifs" = "nb_actifs", 
+         "part_licencies_sportifs" = "nb_licencies_sportifs")
 ```
 
 
