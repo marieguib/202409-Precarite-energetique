@@ -1,0 +1,9 @@
+,Random Forest sans sur-échantillonnage,Random Forest avec SMOTE,Random Forest avec RandomOverSampler,Random Forest avec ADASYN,Random Forest avec BorderlineSMOTE
+0,0.686,0.665,0.691,0.665,0.679
+1,0.286,0.316,0.298,0.29,0.293
+2,0.438,0.5,0.519,0.517,0.518
+3,0.0,0.275,0.253,0.293,0.322
+4,0.0,0.129,0.106,0.146,0.171
+5,0.5,0.562,0.55,0.571,0.588
+6,1.0,0.862,0.862,0.857,0.842
+7,0.0,0.129,0.105,0.146,0.17
