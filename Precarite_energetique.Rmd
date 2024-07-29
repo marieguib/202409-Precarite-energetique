@@ -268,6 +268,12 @@ conso_agriculture <- conso_agriculture %>%
 head(conso_agriculture)
 ```
 
+```{r}
+setdiff(conso_agriculture$code_insee, communes$code_commune)
+```
+
+# PROBLEME A GERER : 56049
+
 On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
 
 ```{r}
@@ -289,6 +295,12 @@ conso_industrie <- conso_elec_gaz %>%
 conso_industrie <- conso_industrie %>% 
   rename(code_insee = Code.Commune)
 ```
+
+```{r}
+setdiff(conso_industrie$code_insee, communes$code_commune)
+```
+
+# PROBLEME A GERER : 56049
 
 On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
 
@@ -312,6 +324,12 @@ conso_tertiaire <- conso_tertiaire %>%
   rename(code_insee = Code.Commune)
 ```
 
+```{r}
+setdiff(conso_tertiaire$code_insee, communes$code_commune)
+```
+
+# PROBLEME A GERER : 56049
+
 On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
 
 ```{r}
@@ -333,6 +351,12 @@ conso_residentiel <- conso_elec_gaz %>%
 conso_residentiel <- conso_residentiel %>% 
   rename(code_insee = Code.Commune)
 ```
+
+```{r}
+setdiff(conso_residentiel$code_insee, communes$code_commune)
+```
+
+# PROBLEME A GERER : 56049
 
 On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
 
@@ -356,6 +380,8 @@ conso_totale <- conso_elec_gaz %>%
 conso_totale <- conso_totale %>% 
   rename(code_insee = Code.Commune)
 ```
+
+# PROBLEME A GERER : 56049
 
 On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
 
@@ -412,6 +438,18 @@ emissions_ges <- emissions_ges %>%
 
 head(emissions_ges)
 ```
+
+```{r}
+dim(emissions_ges)
+```
+
+On a bien 1207 communes, on vérifie que ce sont les mêmes que dans notre référentiel
+
+```{r}
+setdiff(emissions_ges$code_insee, communes$code_commune)
+```
+
+Tout est OK
 
 #### c) Conseil France Rénov'
 
@@ -482,6 +520,12 @@ rm(france_renov56)
 ```{r}
 head(france_renov)
 ```
+
+```{r}
+dim(france_renov)
+```
+
+On a seulement 1185 communes qui ont des actes enregistrés pour France Rénov'. On considère que les autres communes ne présentent aucun acte et on met donc la valeur à 0.
 
 ```{r}
 france_renov <- merge(communes, france_renov, by.x = "code_commune", by.y = "code_insee", all = T)
@@ -1469,7 +1513,7 @@ sum(is.na(df_final))
 Nous allons afficher les lignes qui comportent des données manquantes : 
 
 ```{r}
-which(is.na(df_final))
+df_final[which(is.na(df_final)),]
 ```
 
 Suppression des données manquantes
