@@ -714,6 +714,7 @@ head(residences_secondaires)
 
 ```{r}
 setdiff(residences_secondaires$code_insee, communes$code_commune)
+setdiff(communes$code_commune, residences_secondaires$code_insee)
 ```
 
 ### I.2.C. Urbanisme
@@ -766,6 +767,7 @@ zonages_prog <- zonages_prog %>%
 
 ```{r}
 setdiff(zonages_prog$code_insee, communes$code_commune)
+setdiff(communes$code_commune, zonages_prog$code_insee)
 ```
 
 #### b) Loi littoral (climat)
@@ -845,6 +847,7 @@ loi_littoral <- loi_littoral %>%
 
 ```{r}
 setdiff(loi_littoral$code_insee, communes$code_commune)
+setdiff(communes$code_commune, loi_littoral$code_insee)
 ```
 
 
@@ -1144,11 +1147,19 @@ head(pop)
 
 ```{r}
 pop <- pop %>% 
-  filter(an == 2020) %>% 
-  select(codgeo, p_pop)
+  select(codgeo, an, p_pop)
 
 head(pop)
 ```
+
+```{r}
+pop$an <- as.numeric(pop$an)
+pop <- pop[order(pop$codgeo, -pop$an), ]
+pop <- pop[!duplicated(pop$codgeo),]
+
+head(pop)
+```
+
 
 Nous ne gardons que les communes de Bretagne
 
@@ -1164,8 +1175,12 @@ pop <- pop %>%
 
 ```{r}
 setdiff(pop$code_insee, communes$code_communes)
+setdiff(communes$code_communes, pop$code_insee)
 ```
-# Voir si on a les codes postaux et pas les codes insee
+```{r}
+pop %>% 
+  filter(code_insee =="56019")
+```
 
 
 #### c) CSP du Maire
@@ -1612,13 +1627,61 @@ missing_values_info <- df_final[!complete.cases(df_final), ]
 View(missing_values_info)
 ```
 
-Suppression des données manquantes
-
 ```{r}
-df_final <- df_final %>% 
-  drop_na()
+# Calculer le nombre de valeurs manquantes par colonne
+nb_na_par_colonne <- colSums(is.na(df_final))
+
+# Afficher le résultat
+print(nb_na_par_colonne)
 ```
 
+
+On remplace les valeurs manquantes par la médiane
+
+```{r}
+# Fonction pour remplacer les valeurs manquantes par la médiane
+remplacer_par_mediane <- function(x) {
+  x[is.na(x)] <- median(x, na.rm = TRUE)
+  return(x)
+}
+```
+
+
+
+```{r}
+# Remplacer les NA par la médiane dans chaque colonne spécifiée
+df_final$med_disp <- remplacer_par_mediane(df_final$med_disp)
+df_final$com_variation_encours_dette_ha_pct <- remplacer_par_mediane(df_final$com_variation_encours_dette_ha_pct)
+df_final$abstention_municipales <- remplacer_par_mediane(df_final$abstention_municipales)
+df_final$taux_creation_ent <- remplacer_par_mediane(df_final$taux_creation_ent)
+df_final$nb_licencies_sportifs <- remplacer_par_mediane(df_final$nb_licencies_sportifs)
+df_final$part_jeunes_sans_diplome <- remplacer_par_mediane(df_final$part_jeunes_sans_diplome)
+```
+
+```{r}
+# Calculer le nombre de valeurs manquantes par colonne
+nb_na_par_colonne <- colSums(is.na(df_final))
+
+# Afficher le résultat
+print(nb_na_par_colonne)
+```
+
+
+Remplacement des données manquantes pour la variable qualitative
+
+```{r}
+# Ajouter "Manquant" aux niveaux de la colonne si ce n'est pas déjà fait
+df_final$CSP_maire <- factor(df_final$CSP_maire, levels = c(levels(df_final$CSP_maire), "Manquant"))
+
+# Remplacer les NA par "Manquant"
+df_final$CSP_maire[is.na(df_final$CSP_maire)] <- "Manquant"
+```
+
+On vérifie qu'il n'y a plus de données manquantes
+
+```{r}
+sum(is.na(df_final))
+```
 
 
 ### I.3.C Mise à l'échelle des données
