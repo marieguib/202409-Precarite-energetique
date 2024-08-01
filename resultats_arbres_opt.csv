@@ -1,9 +1,9 @@
 ,Arbre de décision sans sur-échantillonnage,Arbre de décision avec SMOTE,Arbre de décision avec RandomOverSampler,Arbre de décision avec ADASYN,Arbre de décision avec BorderlineSMOTE
-AUC-ROC,0.681,0.578,0.668,0.643,0.637
-AUC-PR,0.29,0.205,0.261,0.241,0.261
-Log loss,0.438,2.763,0.922,1.266,1.718
-F1,0.0,0.238,0.411,0.353,0.358
-MCC,-0.03,0.041,0.258,0.175,0.192
-Accuracy,0.497,0.523,0.667,0.607,0.611
-Spécificité,0.995,0.76,0.643,0.714,0.77
-Kappa,-0.008,0.04,0.217,0.161,0.185
+AUC-ROC,0.546,0.701,0.579,0.533,0.54
+AUC-PR,0.184,0.243,0.178,0.17,0.171
+Log loss,0.735,0.831,0.763,1.785,2.227
+F1,0.13,0.353,0.25,0.242,0.241
+MCC,0.099,0.238,0.071,0.041,0.006
+Accuracy,0.526,0.661,0.544,0.527,0.504
+Spécificité,0.971,0.429,0.737,0.649,0.468
+Kappa,0.075,0.143,0.066,0.035,0.004
