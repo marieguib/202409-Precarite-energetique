@@ -268,6 +268,13 @@ conso_agriculture <- conso_agriculture %>%
 head(conso_agriculture)
 ```
 
+```{r}
+setdiff(conso_agriculture$code_insee, communes$code_commune)
+setdiff(communes$code_commune,conso_agriculture$code_insee)
+```
+
+# PROBLEME A GERER : 56049
+
 On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
 
 ```{r}
@@ -289,6 +296,12 @@ conso_industrie <- conso_elec_gaz %>%
 conso_industrie <- conso_industrie %>% 
   rename(code_insee = Code.Commune)
 ```
+
+```{r}
+setdiff(conso_industrie$code_insee, communes$code_commune)
+```
+
+# PROBLEME A GERER : 56049
 
 On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
 
@@ -312,6 +325,12 @@ conso_tertiaire <- conso_tertiaire %>%
   rename(code_insee = Code.Commune)
 ```
 
+```{r}
+setdiff(conso_tertiaire$code_insee, communes$code_commune)
+```
+
+# PROBLEME A GERER : 56049
+
 On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
 
 ```{r}
@@ -333,6 +352,12 @@ conso_residentiel <- conso_elec_gaz %>%
 conso_residentiel <- conso_residentiel %>% 
   rename(code_insee = Code.Commune)
 ```
+
+```{r}
+setdiff(conso_residentiel$code_insee, communes$code_commune)
+```
+
+# PROBLEME A GERER : 56049
 
 On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
 
@@ -356,6 +381,8 @@ conso_totale <- conso_elec_gaz %>%
 conso_totale <- conso_totale %>% 
   rename(code_insee = Code.Commune)
 ```
+
+# PROBLEME A GERER : 56049
 
 On a 1208 lignes alors qu'on a seulement 1207 communes dans notre référentiel, on va donc ne retenir que les lignes nous concernant
 
@@ -412,6 +439,19 @@ emissions_ges <- emissions_ges %>%
 
 head(emissions_ges)
 ```
+
+```{r}
+dim(emissions_ges)
+```
+
+On a bien 1207 communes, on vérifie que ce sont les mêmes que dans notre référentiel
+
+```{r}
+setdiff(emissions_ges$code_insee, communes$code_commune)
+setdiff(communes$code_commune, emissions_ges$code_insee)
+```
+
+Tout est OK
 
 #### c) Conseil France Rénov'
 
@@ -482,6 +522,12 @@ rm(france_renov56)
 ```{r}
 head(france_renov)
 ```
+
+```{r}
+dim(france_renov)
+```
+
+On a seulement 1185 communes qui ont des actes enregistrés pour France Rénov'. On considère que les autres communes ne présentent aucun acte et on met donc la valeur à 0.
 
 ```{r}
 france_renov <- merge(communes, france_renov, by.x = "code_commune", by.y = "code_insee", all = T)
@@ -599,7 +645,7 @@ eco_quartiers <- eco_quartiers %>%
 head(eco_quartiers)
 ```
 
-Nous allons ajouter les communes ne présentant pas d'écoquartiers 
+Nous allons ajouter les communes ne présentant pas d'écoquartiers. On a seulement 711 communes sur 1207 qui présentent des éco-quartiers.
 
 ```{r}
 communes_eco_quartiers <- merge(eco_quartiers, communes, 
@@ -666,6 +712,10 @@ residences_secondaires$part_residences_secondaires <- as.numeric(residences_seco
 head(residences_secondaires)
 ```
 
+```{r}
+setdiff(residences_secondaires$code_insee, communes$code_commune)
+setdiff(communes$code_commune, residences_secondaires$code_insee)
+```
 
 ### I.2.C. Urbanisme
 
@@ -708,9 +758,16 @@ zonages_prog <- zonages_prog %>%
   filter(substr(codgeo, 1, 2) %in% c("22", "29", "35", "56")) 
 ```
 
+On renomme la colonne qui indique le code insee de la commune.
+
 ```{r}
 zonages_prog <- zonages_prog %>% 
   rename(code_insee = codgeo)
+```
+
+```{r}
+setdiff(zonages_prog$code_insee, communes$code_commune)
+setdiff(communes$code_commune, zonages_prog$code_insee)
 ```
 
 #### b) Loi littoral (climat)
@@ -788,6 +845,13 @@ loi_littoral <- loi_littoral %>%
   rename(code_insee = INSEE_COM)
 ```
 
+```{r}
+setdiff(loi_littoral$code_insee, communes$code_commune)
+setdiff(communes$code_commune, loi_littoral$code_insee)
+```
+
+
+
 #### c) Densité
 
 Nous allons ensuite importer les données qui décrivent la grille communale de densité en 7 niveaux : 
@@ -836,6 +900,10 @@ densite7 <- densite7 %>%
   rename(code_insee = codgeo)
 ```
 
+```{r}
+setdiff(densite7$code_insee, communes$code_commune)
+```
+
 
 #### d) Superficie
 
@@ -880,6 +948,11 @@ superficie <- superficie %>%
   rename(code_insee = codgeo)
 ```
 
+```{r}
+setdiff(superficie$code_insee, communes$code_commune)
+```
+
+
 #### e) Département
 
 Nous allons définir la variable Département pour savoir si le département d'appartenance de la commune joue un rôle dans sa demande de subventions en faveur de la transition écologique
@@ -888,6 +961,10 @@ Nous allons définir la variable Département pour savoir si le département d'a
 departements <- as.data.frame(cbind("code_insee" = communes$code_commune, 
                       "departement" = substr(communes$code_commune, 1,2)))
 head(departements)
+```
+
+```{r}
+setdiff(departements$code_insee, communes$code_commune)
 ```
 
 
@@ -968,6 +1045,11 @@ gares <- gares %>%
 head(gares)
 ```
 
+```{r}
+setdiff(gares$code_insee, communes$code_commune)
+```
+
+
 #### b) Déplacements domicile-travail
 
 ```{r}
@@ -997,6 +1079,9 @@ part_deplacement_dom_travail$part_trajets_voiture <- as.numeric(part_deplacement
 head(part_deplacement_dom_travail)
 ```
 
+```{r}
+setdiff(part_deplacement_dom_travail$code_insee, communes$code_commune)
+```
 
 ### I.2.E. Population / Economie / Emploi
 
@@ -1036,6 +1121,11 @@ revenu_dispo <- revenu_dispo %>%
   rename(code_insee = codgeo)
 ```
 
+```{r}
+setdiff(revenu_dispo$code_insee, communes$code_commune)
+```
+
+
 #### b) Population
 
 Nous allons maintenant importer les données de population
@@ -1057,11 +1147,19 @@ head(pop)
 
 ```{r}
 pop <- pop %>% 
-  filter(an == 2020) %>% 
-  select(codgeo, p_pop)
+  select(codgeo, an, p_pop)
 
 head(pop)
 ```
+
+```{r}
+pop$an <- as.numeric(pop$an)
+pop <- pop[order(pop$codgeo, -pop$an), ]
+pop <- pop[!duplicated(pop$codgeo),]
+
+head(pop)
+```
+
 
 Nous ne gardons que les communes de Bretagne
 
@@ -1074,6 +1172,16 @@ pop <- pop %>%
 pop <- pop %>% 
   rename(code_insee = codgeo)
 ```
+
+```{r}
+setdiff(pop$code_insee, communes$code_communes)
+setdiff(communes$code_communes, pop$code_insee)
+```
+```{r}
+pop %>% 
+  filter(code_insee =="56019")
+```
+
 
 #### c) CSP du Maire
 
@@ -1102,7 +1210,7 @@ elus <- elus %>%
   select(`Code.de.la.commune`, `Code.de.la.catégorie.socio.professionnelle`, `Libellé.de.la.catégorie.socio.professionnelle`, `Libellé.de.la.fonction`)
 ```
 
-On ne garde que le code et le code de la CSP 
+On ne garde que le code insee et le code de la CSP 
 
 ```{r}
 elus <- elus %>% 
@@ -1110,6 +1218,12 @@ elus <- elus %>%
   rename(code_insee = `Code.de.la.commune`, 
          CSP_maire = `Code.de.la.catégorie.socio.professionnelle`)
 ```
+
+```{r}
+setdiff(elus$code_insee, communes$code_commune)
+setdiff(communes$code_commune, elus$code_insee)
+```
+
 
 On récupère les communes manquantes pour la région Bretagne
 
@@ -1163,14 +1277,15 @@ head(taux_endettement)
 ```{r}
 # Remplacement des valeurs -9999 par NA 
 taux_endettement <- taux_endettement %>% 
-  mutate(com_variation_encours_dette_ha_pct = ifelse(com_variation_encours_dette_ha_pct == -9999, NA, com_variation_encours_dette_ha_pct))
+  mutate(com_variation_encours_dette_ha_pct = ifelse(com_variation_encours_dette_ha_pct == -9999, 
+                                                     NA, com_variation_encours_dette_ha_pct))
 ```
 
 
 
 #### e) Inactifs
 
-Nous allons importer le fichier qui contient le nombre d'inacyifs de 15 à 64 ans en 2020 selon les communes.
+Nous allons importer le fichier qui contient le nombre d'inactifs de 15 à 64 ans en 2020 selon les communes.
 
 ```{r}
 FILE_KEY_S3 <- "Sujet_master/Data/X/Economie_Emploi/nb_inactifs_15-64ans.csv"
@@ -1194,6 +1309,11 @@ nb_inactifs <- nb_inactifs %>%
   rename("code_insee" = "Code", 
          "nb_inactifs" = "Nombre.d.inactifs.de.15.64.ans.2020") %>% 
   filter(substr(code_insee, 1, 2) %in% c("22", "29", "35", "56"))
+```
+
+```{r}
+setdiff(nb_inactifs$code_insee, communes$code_commune)
+setdiff(communes$code_commune, nb_inactifs$code_insee)
 ```
 
 
@@ -1252,6 +1372,13 @@ dependance_eco$dependance_eco <- as.numeric(dependance_eco$dependance_eco)
 head(dependance_eco)
 ```
 
+
+```{r}
+setdiff(dependance_eco$code_insee, communes$code_commune)
+setdiff(communes$code_commune, dependance_eco$code_insee)
+```
+
+
 #### h) Taux d'abstention au premier tour des municipales
 
 ```{r}
@@ -1281,6 +1408,12 @@ taux_abstention$abstention_municipales <- as.numeric(taux_abstention$abstention_
 head(taux_abstention)
 ```
 
+```{r}
+setdiff(taux_abstention$code_insee, communes$code_commune)
+setdiff(communes$code_commune,taux_abstention$code_insee)
+```
+
+
 #### i) Taux de création d'entreprises
 
 ```{r}
@@ -1309,6 +1442,13 @@ taux_creation_entreprises$taux_creation_ent <- as.numeric(taux_creation_entrepri
 
 head(taux_creation_entreprises)
 ```
+
+```{r}
+setdiff(taux_creation_entreprises$code_insee, communes$code_commune)
+setdiff(communes$code_commune, taux_creation_entreprises$code_insee)
+```
+
+
 #### j) Nombre d'entreprises
 
 ```{r}
@@ -1337,6 +1477,12 @@ nb_entreprises$total_entreprises <- as.integer(nb_entreprises$total_entreprises)
 
 head(nb_entreprises)
 ```
+
+```{r}
+setdiff(nb_entreprises$code_insee, communes$code_commune)
+setdiff( communes$code_commune, nb_entreprises$code_insee)
+```
+
 
 ### I.2.F. Social
 
@@ -1368,6 +1514,11 @@ sportifs_licencies$nb_licencies_sportifs <- as.integer(sportifs_licencies$nb_lic
 head(sportifs_licencies)
 ```
 
+```{r}
+setdiff(sportifs_licencies$code_insee, communes$code_commune)
+setdiff(communes$code_commune, sportifs_licencies$code_insee)
+```
+
 
 #### b) 20-24 ans sans diplôme
 
@@ -1397,10 +1548,10 @@ jeunes_sans_diplome$part_jeunes_sans_diplome <- as.numeric(jeunes_sans_diplome$p
 head(jeunes_sans_diplome)
 ```
 
-
-#### c) Nombre d'association
-
-
+```{r}
+setdiff(jeunes_sans_diplome$code_insee, communes$code_commune)
+setdiff(communes$code_commune, jeunes_sans_diplome$code_insee)
+```
 
 
 ## I.3. Constitution de la base de données
@@ -1469,16 +1620,68 @@ sum(is.na(df_final))
 Nous allons afficher les lignes qui comportent des données manquantes : 
 
 ```{r}
-which(is.na(df_final))
-```
+# Identifier les lignes avec des valeurs manquantes
+missing_values_info <- df_final[!complete.cases(df_final), ]
 
-Suppression des données manquantes
+# Afficher les lignes avec des valeurs manquantes
+View(missing_values_info)
+```
 
 ```{r}
-df_final <- df_final %>% 
-  drop_na()
+# Calculer le nombre de valeurs manquantes par colonne
+nb_na_par_colonne <- colSums(is.na(df_final))
+
+# Afficher le résultat
+print(nb_na_par_colonne)
 ```
 
+
+On remplace les valeurs manquantes par la médiane
+
+```{r}
+# Fonction pour remplacer les valeurs manquantes par la médiane
+remplacer_par_mediane <- function(x) {
+  x[is.na(x)] <- median(x, na.rm = TRUE)
+  return(x)
+}
+```
+
+
+
+```{r}
+# Remplacer les NA par la médiane dans chaque colonne spécifiée
+df_final$med_disp <- remplacer_par_mediane(df_final$med_disp)
+df_final$com_variation_encours_dette_ha_pct <- remplacer_par_mediane(df_final$com_variation_encours_dette_ha_pct)
+df_final$abstention_municipales <- remplacer_par_mediane(df_final$abstention_municipales)
+df_final$taux_creation_ent <- remplacer_par_mediane(df_final$taux_creation_ent)
+df_final$nb_licencies_sportifs <- remplacer_par_mediane(df_final$nb_licencies_sportifs)
+df_final$part_jeunes_sans_diplome <- remplacer_par_mediane(df_final$part_jeunes_sans_diplome)
+```
+
+```{r}
+# Calculer le nombre de valeurs manquantes par colonne
+nb_na_par_colonne <- colSums(is.na(df_final))
+
+# Afficher le résultat
+print(nb_na_par_colonne)
+```
+
+
+Remplacement des données manquantes pour la variable qualitative
+
+```{r}
+# Ajouter "Manquant" aux niveaux de la colonne si ce n'est pas déjà fait
+df_final$CSP_maire <- factor(df_final$CSP_maire, levels = c(levels(df_final$CSP_maire), "Manquant"))
+
+# Remplacer les NA par "Manquant"
+df_final$CSP_maire[is.na(df_final$CSP_maire)] <- "Manquant"
+```
+
+On vérifie qu'il n'y a plus de données manquantes
+
+```{r}
+sum(is.na(df_final))
+```
 
 
 ### I.3.C Mise à l'échelle des données
