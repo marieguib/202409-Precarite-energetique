@@ -1,9 +1,0 @@
-,Gradient Boosting sans sur-échantillonnage,Gradient Boosting avec SMOTE,Gradient Boosting avec RandomOverSampler,Gradient Boosting avec ADASYN,Gradient Boosting avec BorderlineSMOTE
-AUC-ROC,0.585,0.667,0.577,0.639,0.629
-AUC-PR,0.243,0.251,0.249,0.228,0.224
-Log loss,0.592,0.508,1.495,0.508,0.503
-F1,0.085,0.276,0.189,0.265,0.216
-MCC,0.027,0.124,0.118,0.116,0.075
-Accuracy,0.508,0.569,0.541,0.563,0.537
-Spécificité,0.961,0.815,0.946,0.829,0.859
-Kappa,0.021,0.121,0.106,0.115,0.075
