@@ -1,5 +1,5 @@
 ,Arbre de décision sans sur-échantillonnage,Arbre de décision avec SMOTE,Arbre de décision avec RandomOverSampler,Arbre de décision avec ADASYN,Arbre de décision avec BorderlineSMOTE
-AUC-ROC,0.546,0.593,0.607,0.6,0.609
-AUC-PR,0.184,0.193,0.205,0.185,0.204
-F1,0.13,0.294,0.297,0.24,0.322
-Balanced Accuracy,0.526,0.578,0.581,0.538,0.606
+AUC-ROC,0.546,0.543,0.57,0.645,0.654
+AUC-PR,0.184,0.169,0.177,0.205,0.229
+F1,0.13,0.276,0.259,0.279,0.331
+Balanced Accuracy,0.526,0.555,0.55,0.563,0.617
