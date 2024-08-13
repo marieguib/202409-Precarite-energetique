@@ -1,5 +1,5 @@
 ,Régression logistique sans sur-échantillonnage,Régression logistique avec SMOTE,Régression logistique avec RandomOverSampler,Régression logistique avec ADASYN,Régression logistique avec BorderlineSMOTE
-AUC-ROC,0.6,0.592,0.596,0.578,0.591
-AUC-PR,0.228,0.217,0.231,0.22,0.217
-F1-score,0.05,0.302,0.212,0.279,0.297
-Balanced accuracy,0.509,0.586,0.541,0.562,0.581
+AUC-ROC,0.6,0.581,0.61,0.581,0.59
+AUC-PR,0.228,0.229,0.204,0.221,0.23
+F1-score,0.05,0.27,0.154,0.281,0.277
+Balanced accuracy,0.509,0.554,0.511,0.564,0.56

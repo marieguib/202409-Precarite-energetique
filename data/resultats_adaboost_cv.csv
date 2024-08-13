@@ -1,5 +1,5 @@
 ,AdaBoost sans sur-échantillonnage,AdaBoost avec SMOTE,AdaBoost avec RandomOverSampler,AdaBoost avec ADASYN,AdaBoost avec BorderlineSMOTE
-AUC-ROC,0.625,0.646,0.601,0.644,0.652
-AUC-PR,0.202,0.245,0.201,0.249,0.262
-F1-score,0.0,0.298,0.299,0.3,0.317
-Balanced accuracy,0.5,0.582,0.584,0.585,0.602
+AUC-ROC,0.619,0.617,0.626,0.622,0.65
+AUC-PR,0.255,0.2,0.202,0.223,0.279
+F1-score,0.182,0.259,0.321,0.283,0.306
+Balanced accuracy,0.536,0.55,0.607,0.571,0.591
