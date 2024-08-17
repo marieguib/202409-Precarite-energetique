@@ -1,5 +1,5 @@
 ,Forêts aléatoires sans sur-échantillonnage,Forêts aléatoires avec SMOTE,Forêts aléatoires avec RandomOverSampler,Forêts aléatoires avec ADASYN,Forêts aléatoires avec BorderlineSMOTE
-AUC-ROC,0.576,0.615,0.612,0.643,0.632
-AUC-PR,0.216,0.248,0.207,0.277,0.3
-F1-score,0.049,0.262,0.283,0.303,0.323
-Balanced accuracy,0.506,0.548,0.569,0.587,0.607
+AUC-ROC,0.6,0.65,0.628,0.633,0.631
+AUC-PR,0.252,0.271,0.249,0.273,0.292
+F1-score,0.136,0.291,0.233,0.301,0.309
+Balanced accuracy,0.531,0.577,0.53,0.586,0.593
