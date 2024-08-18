@@ -1,5 +1,5 @@
 ,Gradient Boosting sans sur-échantillonnage,Gradient Boosting avec SMOTE,Gradient Boosting avec RandomOverSampler,Gradient Boosting avec ADASYN,Gradient Boosting avec BorderlineSMOTE
-AUC-ROC,0.621,0.588,0.548,0.628,0.633
-AUC-PR,0.254,0.219,0.212,0.209,0.221
-F1-score,0.172,0.196,0.259,0.262,0.33
-Balanced accuracy,0.529,0.501,0.55,0.548,0.612
+AUC-ROC,0.597,0.635,0.62,0.622,0.643
+AUC-PR,0.269,0.249,0.227,0.24,0.253
+F1-score,0.179,0.238,0.263,0.206,0.273
+Balanced accuracy,0.533,0.545,0.556,0.536,0.573
